@@ -132,19 +132,19 @@ struct DailyLifePuzzleView: View {
         guard let w = selectedWord, let m = selectedMeaning else { return }
         print("[DailyLifePuzzle] evaluating \(w) vs \(m)")
         if wordCards[w].matchId == meaningCards[m].matchId {
-            print("✅ correct")
+            print(" correct")
             correctWords.insert(w); correctMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 matchedWords.insert(w); matchedMeanings.insert(m)
                 correctWords.remove(w); correctMeanings.remove(m)
                 selectedWord = nil; selectedMeaning = nil
                 if matchedWords.count == wordCards.count {
-                    print("🎉 all matched → onComplete()")
+                    print(" all matched → onComplete()")
                     onComplete()
                 }
             }
         } else {
-            print("❌ wrong")
+            print(" wrong")
             wrongWords.insert(w); wrongMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 wrongWords.remove(w); wrongMeanings.remove(m)

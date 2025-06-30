@@ -25,7 +25,7 @@ class HolidayData: ObservableObject {
     private func loadCSV() {
         print("[HolidayData] Starting loadCSV()")
         guard let url = Bundle.main.url(forResource: "Holidays", withExtension: "csv") else {
-            print("❌ [HolidayData] Holidays.csv not found")
+            print(" [HolidayData] Holidays.csv not found")
             return
         }
         do {
@@ -60,7 +60,7 @@ class HolidayData: ObservableObject {
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             print("[HolidayData] originList:", originList)
             guard !originList.isEmpty else {
-                print("❌ [HolidayData] no origins in header")
+                print(" [HolidayData] no origins in header")
                 return
             }
             var currentOrigin = originList[0]
@@ -74,7 +74,7 @@ class HolidayData: ObservableObject {
                 }
                 let cols = splitCSVLine(rec)
                 guard cols.count >= 2 else {
-                    print("⚠️ [HolidayData] skipping record \(i): not 2+ cols →", cols)
+                    print(" [HolidayData] skipping record \(i): not 2+ cols →", cols)
                     continue
                 }
                 let firstField = cols[0]
@@ -93,7 +93,7 @@ class HolidayData: ObservableObject {
                     holiday = parts[0]
                     origin  = parts[1]
                     currentOrigin = origin
-                    print("ℹ️ [HolidayData] record \(i) explicit origin:", origin)
+                    print(" [HolidayData] record \(i) explicit origin:", origin)
                 } else {
                     // use current block origin
                     holiday = firstField.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -101,18 +101,18 @@ class HolidayData: ObservableObject {
                 }
 
                 guard !holiday.isEmpty, !meaning.isEmpty else {
-                    print("⚠️ [HolidayData] skipping record \(i): empty holiday/meaning →", holiday, meaning)
+                    print(" [HolidayData] skipping record \(i): empty holiday/meaning →", holiday, meaning)
                     continue
                 }
 
                 tmp.append(.init(id: i, word: holiday, meaning: meaning, origin: origin))
-                print("✅ [HolidayData] loaded #\(i): \(holiday) / \(meaning) (\(origin))")
+                print(" [HolidayData] loaded #\(i): \(holiday) / \(meaning) (\(origin))")
             }
 
             pairs = tmp
             print("[HolidayData] Loaded pairs count:", pairs.count)
         } catch {
-            print("❌ [HolidayData] Error reading CSV:", error)
+            print(" [HolidayData] Error reading CSV:", error)
         }
     }
 

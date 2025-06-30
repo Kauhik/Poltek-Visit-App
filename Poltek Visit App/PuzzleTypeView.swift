@@ -11,6 +11,7 @@ enum PuzzleType: String, CaseIterable, Identifiable {
     case words     = "Words"
     case holidays  = "Holidays"
     case dailyLife = "Daily Life"
+    case dailyFood = "Daily Food"
     var id: Self { self }
 }
 

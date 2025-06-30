@@ -25,7 +25,7 @@ class DailyLifeData: ObservableObject {
     private func loadCSV() {
         print("[DailyLifeData] Starting loadCSV()")
         guard let url = Bundle.main.url(forResource: "Dailylife", withExtension: "csv") else {
-            print("❌ [DailyLifeData] Dailylife.csv not found")
+            print(" [DailyLifeData] Dailylife.csv not found")
             return
         }
         do {
@@ -63,7 +63,7 @@ class DailyLifeData: ObservableObject {
                 if i == 0 { continue }
                 let cols = splitCSVLine(rec)
                 guard cols.count >= 2 else {
-                    print("⚠️ [DailyLifeData] skip record \(i):", cols)
+                    print(" [DailyLifeData] skip record \(i):", cols)
                     continue
                 }
                 // detect embedded origin via newline in word field
@@ -83,18 +83,18 @@ class DailyLifeData: ObservableObject {
                 let meaning = cols[1].trimmingCharacters(in: .whitespacesAndNewlines)
 
                 guard !word.isEmpty, !meaning.isEmpty else {
-                    print("⚠️ [DailyLifeData] skip empty fields \(i):", word, meaning)
+                    print(" [DailyLifeData] skip empty fields \(i):", word, meaning)
                     continue
                 }
 
                 tmp.append(.init(id: i, word: word, meaning: meaning, origin: origin))
-                print("✅ [DailyLifeData] loaded #\(i):", word, "/", meaning, "(\(origin))")
+                print(" [DailyLifeData] loaded #\(i):", word, "/", meaning, "(\(origin))")
             }
 
             pairs = tmp
             print("[DailyLifeData] total pairs:", pairs.count)
         } catch {
-            print("❌ [DailyLifeData] Error reading CSV:", error)
+            print(" [DailyLifeData] Error reading CSV:", error)
         }
     }
 
