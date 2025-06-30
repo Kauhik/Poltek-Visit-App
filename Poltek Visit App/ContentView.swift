@@ -13,7 +13,12 @@ enum Page {
     case clueGrid
     case scannerMenu
     case scannerCamera, scannerNFC, scannerMicrophone, scannerAR
-    case puzzle
+
+    // NEW: puzzle selection and puzzle instances
+    case puzzleSelect
+    case puzzleWords
+    case puzzleHolidays
+
     case codeReveal
 }
 
@@ -21,30 +26,30 @@ struct ContentView: View {
     // MARK: – App State
     @State private var currentPage: Page = .teamEntry
     @State private var teamNumber: String = ""
-    
-    // How many uses remain per tech
+
+    // Scan‐tech usage tracking
     @State private var usageLeft: [ScanTech:Int] = .init(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
-    
-    // Which letters have been unlocked (in A→E order)
+
+    // Unlocked letters A–E
     @State private var unlockedLetters: [String] = []
     private let allLetters = ["A","B","C","D","E"]
-    
-    // Which letter is currently selected for the puzzle
+
+    // Which letter is currently selected for A–E puzzle (still used)
     @State private var selectedLetter: String = ""
 
     var body: some View {
         VStack {
             switch currentPage {
-            
+
             //  Team Number Entry
             case .teamEntry:
                 TeamInputView(teamNumber: $teamNumber) {
                     currentPage = .clueGrid
                 }
 
-            //  Clue Grid (A–E + Scan Clue)
+            //  Clue Grid
             case .clueGrid:
                 ClueListView(
                     teamNumber: teamNumber,
@@ -52,27 +57,26 @@ struct ContentView: View {
                     onScan: { currentPage = .scannerMenu },
                     onSelect: { letter in
                         selectedLetter = letter
-                        currentPage = .puzzle
+                        currentPage = .puzzleSelect
                     }
                 )
 
-            //  Scanner Menu (choose tech)
+            //  Scanner Menu
             case .scannerMenu:
                 ScannerMenuView(
                     usageLeft: usageLeft,
                     unlockedCount: unlockedLetters.count
                 ) { tech in
-                    // only proceed if uses remain
                     guard (usageLeft[tech] ?? 0) > 0 else { return }
                     switch tech {
-                    case .camera: currentPage = .scannerCamera
-                    case .nfc: currentPage = .scannerNFC
-                    case .microphone: currentPage = .scannerMicrophone
-                    case .ar: currentPage = .scannerAR
+                    case .camera:      currentPage = .scannerCamera
+                    case .nfc:         currentPage = .scannerNFC
+                    case .microphone:  currentPage = .scannerMicrophone
+                    case .ar:          currentPage = .scannerAR
                     }
                 }
 
-            //  Individual Scan Placeholders
+            //  Scan placeholders
             case .scannerCamera:
                 CameraFeedView { completeScan() }
             case .scannerNFC:
@@ -82,26 +86,42 @@ struct ContentView: View {
             case .scannerAR:
                 ARCameraView    { completeScan() }
 
-            //  Matching-Pairs Puzzle
-            case .puzzle:
+            //  Puzzle-type selector
+            case .puzzleSelect:
+                PuzzleTypeView { choice in
+                    switch choice {
+                    case .words:    currentPage = .puzzleWords
+                    case .holidays: currentPage = .puzzleHolidays
+                    }
+                }
+
+            //  Words matching‐pairs
+            case .puzzleWords:
                 MatchingPuzzleView {
                     currentPage = .codeReveal
                 }
 
-            //  Code Reveal
+            //  Holidays matching‐pairs
+            case .puzzleHolidays:
+                HolidayPuzzleView {
+                    currentPage = .codeReveal
+                }
+
+            //  Reveal Code
             case .codeReveal:
                 CodeView {
+                    // After reveal, go back to grid
                     currentPage = .clueGrid
                 }
             }
+
         }
         .animation(.default, value: currentPage)
         .padding()
     }
 
-    // MARK: – Shared Scan Completion Logic
+    // MARK: – Shared scan completion
     private func completeScan() {
-        // figure out which tech we just used
         let tech: ScanTech
         switch currentPage {
         case .scannerCamera:      tech = .camera
@@ -111,25 +131,16 @@ struct ContentView: View {
         default: return
         }
 
-        // decrement uses
         if let left = usageLeft[tech], left > 0 {
             usageLeft[tech] = left - 1
         }
 
-        // unlock the next letter A→E
         if unlockedLetters.count < allLetters.count {
             let next = allLetters[unlockedLetters.count]
             unlockedLetters.append(next)
             selectedLetter = next
         }
 
-        // jump straight to puzzle
-        currentPage = .puzzle
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+        currentPage = .puzzleSelect
     }
 }
