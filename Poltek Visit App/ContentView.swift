@@ -7,61 +7,37 @@
 
 import SwiftUI
 
-// MARK: – Navigation Pages
 enum Page {
-    case teamEntry
-    case clueGrid
-    case scannerMenu
+    case teamEntry, clueGrid, scannerMenu
     case scannerCamera, scannerNFC, scannerMicrophone, scannerAR
-
-    // NEW: puzzle selection and puzzle instances
-    case puzzleSelect
-    case puzzleWords
-    case puzzleHolidays
-
-    case codeReveal
+    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, codeReveal
 }
 
 struct ContentView: View {
-    // MARK: – App State
     @State private var currentPage: Page = .teamEntry
     @State private var teamNumber: String = ""
-
-    // Scan‐tech usage tracking
     @State private var usageLeft: [ScanTech:Int] = .init(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
-
-    // Unlocked letters A–E
     @State private var unlockedLetters: [String] = []
     private let allLetters = ["A","B","C","D","E"]
-
-    // Which letter is currently selected for A–E puzzle (still used)
-    @State private var selectedLetter: String = ""
 
     var body: some View {
         VStack {
             switch currentPage {
-
-            //  Team Number Entry
             case .teamEntry:
                 TeamInputView(teamNumber: $teamNumber) {
                     currentPage = .clueGrid
                 }
 
-            //  Clue Grid
             case .clueGrid:
                 ClueListView(
                     teamNumber: teamNumber,
                     unlockedLetters: Set(unlockedLetters),
                     onScan: { currentPage = .scannerMenu },
-                    onSelect: { letter in
-                        selectedLetter = letter
-                        currentPage = .puzzleSelect
-                    }
+                    onSelect: { _ in currentPage = .puzzleSelect }
                 )
 
-            //  Scanner Menu
             case .scannerMenu:
                 ScannerMenuView(
                     usageLeft: usageLeft,
@@ -76,51 +52,47 @@ struct ContentView: View {
                     }
                 }
 
-            //  Scan placeholders
             case .scannerCamera:
                 CameraFeedView { completeScan() }
             case .scannerNFC:
-                NFCScanView     { completeScan() }
+                NFCScanView { completeScan() }
             case .scannerMicrophone:
                 MicrophoneScanView { completeScan() }
             case .scannerAR:
-                ARCameraView    { completeScan() }
+                ARCameraView { completeScan() }
 
-            //  Puzzle-type selector
             case .puzzleSelect:
                 PuzzleTypeView { choice in
                     switch choice {
-                    case .words:    currentPage = .puzzleWords
-                    case .holidays: currentPage = .puzzleHolidays
+                    case .words:      currentPage = .puzzleWords
+                    case .holidays:   currentPage = .puzzleHolidays
+                    case .dailyLife:  currentPage = .puzzleDailyLife
                     }
                 }
 
-            //  Words matching‐pairs
             case .puzzleWords:
                 MatchingPuzzleView {
                     currentPage = .codeReveal
                 }
-
-            //  Holidays matching‐pairs
             case .puzzleHolidays:
                 HolidayPuzzleView {
                     currentPage = .codeReveal
                 }
+            case .puzzleDailyLife:
+                DailyLifePuzzleView {
+                    currentPage = .codeReveal
+                }
 
-            //  Reveal Code
             case .codeReveal:
                 CodeView {
-                    // After reveal, go back to grid
                     currentPage = .clueGrid
                 }
             }
-
         }
         .animation(.default, value: currentPage)
         .padding()
     }
 
-    // MARK: – Shared scan completion
     private func completeScan() {
         let tech: ScanTech
         switch currentPage {
@@ -130,17 +102,10 @@ struct ContentView: View {
         case .scannerAR:          tech = .ar
         default: return
         }
-
-        if let left = usageLeft[tech], left > 0 {
-            usageLeft[tech] = left - 1
-        }
-
+        usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
         if unlockedLetters.count < allLetters.count {
-            let next = allLetters[unlockedLetters.count]
-            unlockedLetters.append(next)
-            selectedLetter = next
+            unlockedLetters.append(allLetters[unlockedLetters.count])
         }
-
         currentPage = .puzzleSelect
     }
 }

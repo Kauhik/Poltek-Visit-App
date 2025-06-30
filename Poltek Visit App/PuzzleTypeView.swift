@@ -5,12 +5,12 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
-import Foundation
 import SwiftUI
 
 enum PuzzleType: String, CaseIterable, Identifiable {
-    case words    = "Words"
-    case holidays = "Holidays"
+    case words     = "Words"
+    case holidays  = "Holidays"
+    case dailyLife = "Daily Life"
     var id: Self { self }
 }
 
