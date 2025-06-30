@@ -7,147 +7,199 @@
 
 import SwiftUI
 
-fileprivate struct Card: Identifiable {
+fileprivate struct CardItem: Identifiable {
     let id: Int
     let text: String
     let matchId: Int
 }
 
 struct MatchingPuzzleView: View {
+    /// Called once all 5 pairs are matched
     var onComplete: () -> Void
 
-        //SAMPLE
-    private let pairs = [
-        ("Blur like sotong",         "Expression of surprise"),
-        ("Walao",                     "Very confused"),
-        ("Cocoklogi",                 "Making patterns from coincidences")
-    ]
+    @StateObject private var data = PuzzleData()
 
-    // flat cards in row-major order: [Q1, A1, Q2, A2, Q3, A3]
-    @State private var cards: [Card] = []
-    @State private var selected: [Int] = []
-    @State private var wrongSet: Set<Int> = []
-    @State private var correctSet: Set<Int> = []
-    @State private var matchedSet: Set<Int> = []
+    // Left‐column words & right‐column meanings
+    @State private var wordCards: [CardItem]    = []
+    @State private var meaningCards: [CardItem] = []
 
-    init(onComplete: @escaping () -> Void) {
-        self.onComplete = onComplete
-        var tmp: [Card] = []
-        for (i, pair) in pairs.enumerated() {
-            tmp.append(.init(id: i*2,   text: pair.0, matchId: i))
-            tmp.append(.init(id: i*2+1, text: pair.1, matchId: i))
-        }
-        _cards = State(initialValue: tmp)
-    }
+    // Selections
+    @State private var selectedWord: Int?       = nil
+    @State private var selectedMeaning: Int?    = nil
+
+    // Feedback sets
+    @State private var wrongWords: Set<Int>     = []
+    @State private var wrongMeanings: Set<Int>  = []
+    @State private var correctWords: Set<Int>   = []
+    @State private var correctMeanings: Set<Int> = []
+
+    // Matched sets (faded)
+    @State private var matchedWords: Set<Int>    = []
+    @State private var matchedMeanings: Set<Int> = []
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Cultural Expression")
-                        .font(.title2).bold()
-                    Text("Tap the matching pairs")
-                        .font(.subheadline)
+            // Header
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Cultural Expression")
+                    .font(.title2).bold()
+                Text("Tap the matching pairs")
+                    .font(.subheadline)
+            }
+            .padding(.horizontal)
+
+            // 5 rows x 2 columns
+            VStack(spacing: 12) {
+                ForEach(0..<wordCards.count, id: \.self) { row in
+                    HStack(spacing: 12) {
+                        leftCard(row)
+                        rightCard(row)
+                    }
                 }
-                Spacer()
-                Button(action: { /* close */ }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title2)
-                }
+            }
+            .padding(.horizontal)
+        }
+        .onReceive(data.$pairs) { all in
+            // 1) Filter only SG/ID
+            let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
+            // 2) Ensure at least one of each if possible
+            let origins = Set(filtered.map(\.origin))
+            let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
+
+            // 3) Pick 5
+            let chosen: [PuzzlePair]
+            if needMix && filtered.count >= 5 {
+                var tmp: [PuzzlePair]
+                repeat {
+                    tmp = Array(filtered.shuffled().prefix(5))
+                } while !(
+                    tmp.contains(where:{ $0.origin=="Singapore" })
+                    && tmp.contains(where:{ $0.origin=="Indonesia" })
+                )
+                chosen = tmp
+            } else {
+                chosen = Array(filtered.shuffled().prefix(5))
             }
 
-            // 3 rows × 2 cols
-            let columns = [ GridItem(.flexible()), GridItem(.flexible()) ]
-            LazyVGrid(columns: columns, spacing: 12) {
-                ForEach(Array(cards.enumerated()), id: \.1.id) { idx, card in
-                    CardView(
-                        text: card.text,
-                        state: cardState(at: idx)
-                    ) {
-                        guard !matchedSet.contains(idx) else { return }
-                        tapCard(at: idx)
-                    }
-                    .opacity(matchedSet.contains(idx) ? 0.3 : 1)
-                }
-            }
+            // 4) Build independent shuffles
+            wordCards = chosen
+                .map { CardItem(id:$0.id*2, text:$0.word, matchId:$0.id) }
+                .shuffled()
+            meaningCards = chosen
+                .map { CardItem(id:$0.id*2+1, text:$0.meaning, matchId:$0.id) }
+                .shuffled()
+
+            // 5) Reset all selection/feedback
+            selectedWord     = nil
+            selectedMeaning  = nil
+            wrongWords.removeAll()
+            wrongMeanings.removeAll()
+            correctWords.removeAll()
+            correctMeanings.removeAll()
+            matchedWords.removeAll()
+            matchedMeanings.removeAll()
         }
-        .padding()
-        .background(
-            LinearGradient(
-                gradient: .init(colors: [Color.yellow.opacity(0.2),
-                                         Color.orange.opacity(0.1)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
     }
 
-    private func cardState(at idx: Int) -> CardView.State {
-        if wrongSet.contains(idx)      { return .wrong }
-        if correctSet.contains(idx)    { return .correct }
-        if selected.contains(idx)      { return .selected }
+    // MARK: – Card builders
+
+    private func leftCard(_ row: Int) -> some View {
+        CardView(text: wordCards[row].text, state: wordState(row))
+            .onTapGesture { tapWord(row) }
+            .disabled(matchedWords.contains(row))
+            .opacity(matchedWords.contains(row) ? 0.3 : 1)
+    }
+
+    private func rightCard(_ row: Int) -> some View {
+        CardView(text: meaningCards[row].text, state: meaningState(row))
+            .onTapGesture { tapMeaning(row) }
+            .disabled(matchedMeanings.contains(row))
+            .opacity(matchedMeanings.contains(row) ? 0.3 : 1)
+    }
+
+    // MARK: – States
+
+    private func wordState(_ row: Int) -> CardView.CardState {
+        if wrongWords.contains(row)    { return .wrong }
+        if correctWords.contains(row)  { return .correct }
+        if selectedWord == row         { return .selected }
         return .normal
     }
 
-    private func tapCard(at idx: Int) {
-        guard selected.count < 2, !selected.contains(idx) else { return }
-        selected.append(idx)
+    private func meaningState(_ row: Int) -> CardView.CardState {
+        if wrongMeanings.contains(row)   { return .wrong }
+        if correctMeanings.contains(row) { return .correct }
+        if selectedMeaning == row        { return .selected }
+        return .normal
+    }
 
-        if selected.count == 2 {
-            // show both as selected
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                evaluatePair()
-            }
+    // MARK: – Tap handlers
+
+    private func tapWord(_ row: Int) {
+        // only if none selected yet
+        guard selectedWord == nil else { return }
+        selectedWord = row
+    }
+
+    private func tapMeaning(_ row: Int) {
+        // only after a word is selected
+        guard selectedMeaning == nil, selectedWord != nil else { return }
+        selectedMeaning = row
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            evaluatePair()
         }
     }
 
     private func evaluatePair() {
-        let a = selected[0], b = selected[1]
-        if cards[a].matchId == cards[b].matchId {
-            // correct pair
-            correctSet.formUnion([a,b])
+        guard let w = selectedWord, let m = selectedMeaning else { return }
+        if wordCards[w].matchId == meaningCards[m].matchId {
+            // correct
+            correctWords.insert(w)
+            correctMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                matchedSet.formUnion([a,b])
-                correctSet.subtract([a,b])
-                selected.removeAll()
-                if matchedSet.count == cards.count {
+                matchedWords.insert(w)
+                matchedMeanings.insert(m)
+                correctWords.remove(w)
+                correctMeanings.remove(m)
+                selectedWord    = nil
+                selectedMeaning = nil
+                // done?
+                if matchedWords.count == wordCards.count {
                     onComplete()
                 }
             }
         } else {
-            // wrong pair
-            wrongSet.formUnion([a,b])
+            // wrong
+            wrongWords.insert(w)
+            wrongMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                wrongSet.subtract([a,b])
-                selected.removeAll()
+                wrongWords.remove(w)
+                wrongMeanings.remove(m)
+                selectedWord    = nil
+                selectedMeaning = nil
             }
         }
     }
 }
 
 fileprivate struct CardView: View {
-    enum State { case normal, selected, wrong, correct }
+    enum CardState { case normal, selected, wrong, correct }
 
     let text: String
-    let state: State
-    let action: () -> Void
+    let state: CardState
 
     var body: some View {
         Text(text)
             .multilineTextAlignment(.center)
             .padding()
             .frame(maxWidth: .infinity)
-            .background(backgroundColor)
+            .background(background)
             .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.orange, lineWidth: 1)
-            )
-            .onTapGesture(perform: action)
+            .overlay(RoundedRectangle(cornerRadius: 8)
+                       .stroke(Color.orange, lineWidth: 1))
     }
 
-    private var backgroundColor: Color {
+    private var background: Color {
         switch state {
         case .normal:   return .white
         case .selected: return Color.orange.opacity(0.3)
