@@ -15,8 +15,9 @@ fileprivate struct CardItem: Identifiable {
 
 struct HolidayPuzzleView: View {
     var onComplete: () -> Void
-    @StateObject private var data = HolidayData()
+    var onBack: () -> Void
 
+    @StateObject private var data = HolidayData()
     @State private var wordCards: [CardItem]    = []
     @State private var meaningCards: [CardItem] = []
     @State private var selectedWord: Int?       = nil
@@ -29,63 +30,69 @@ struct HolidayPuzzleView: View {
     @State private var matchedMeanings: Set<Int> = []
 
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Holiday Puzzle")
-                    .font(.title2).bold()
-                Text("Tap the matching pairs")
-                    .font(.subheadline)
-            }
-            .padding(.horizontal)
+        NavigationStack {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Holiday Puzzle")
+                        .font(.title2).bold()
+                    Text("Tap the matching pairs")
+                        .font(.subheadline)
+                }
+                .padding(.horizontal)
 
-            VStack(spacing: 12) {
-                ForEach(0..<wordCards.count, id: \.self) { row in
-                    HStack(spacing: 12) {
-                        cardViewLeft(row)
-                        cardViewRight(row)
+                VStack(spacing: 12) {
+                    ForEach(0..<wordCards.count, id: \.self) { row in
+                        HStack(spacing: 12) {
+                            cardViewLeft(row)
+                            cardViewRight(row)
+                        }
                     }
                 }
+                .padding(.horizontal)
+
+                Spacer()
             }
-            .padding(.horizontal)
-        }
-        .onReceive(data.$pairs) { all in
-            print("\n[HolidayPuzzle] raw pairs:", all.count)
-            let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
-            print("[HolidayPuzzle] after filter:", filtered.count)
-            let origins = Set(filtered.map(\.origin))
-            let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
-            print("[HolidayPuzzle] origins:", origins, "needMix:", needMix)
+            .onReceive(data.$pairs) { all in
+                let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
+                let origins = Set(filtered.map(\.origin))
+                let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
 
-            // pick 5
-            let chosen: [HolidayPair]
-            if needMix && filtered.count >= 5 {
-                var tmp: [HolidayPair]
-                repeat {
-                    tmp = Array(filtered.shuffled().prefix(5))
-                } while !(
-                    tmp.contains(where:{ $0.origin=="Singapore" }) &&
-                    tmp.contains(where:{ $0.origin=="Indonesia" })
-                )
-                chosen = tmp
-            } else {
-                chosen = Array(filtered.shuffled().prefix(5))
+                let chosen: [HolidayPair]
+                if needMix && filtered.count >= 5 {
+                    var tmp: [HolidayPair]
+                    repeat {
+                        tmp = Array(filtered.shuffled().prefix(5))
+                    } while !(
+                        tmp.contains(where:{ $0.origin=="Singapore" }) &&
+                        tmp.contains(where:{ $0.origin=="Indonesia" })
+                    )
+                    chosen = tmp
+                } else {
+                    chosen = Array(filtered.shuffled().prefix(5))
+                }
+
+                wordCards = chosen
+                    .map { CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id) }
+                    .shuffled()
+                meaningCards = chosen
+                    .map { CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id) }
+                    .shuffled()
+
+                selectedWord = nil
+                selectedMeaning = nil
+                wrongWords.removeAll()
+                wrongMeanings.removeAll()
+                correctWords.removeAll()
+                correctMeanings.removeAll()
+                matchedWords.removeAll()
+                matchedMeanings.removeAll()
             }
-            print("[HolidayPuzzle] chosen 5:", chosen.map{ "\($0.word)/\($0.origin)" })
-
-            // build & shuffle
-            wordCards    = chosen.map { CardItem(id:$0.id*2,    text:$0.word,    matchId:$0.id) }
-                                .shuffled()
-            meaningCards = chosen.map { CardItem(id:$0.id*2+1,  text:$0.meaning, matchId:$0.id) }
-                                .shuffled()
-            print("[HolidayPuzzle] wordCards:", wordCards.map(\.text))
-            print("[HolidayPuzzle] meaningCards:", meaningCards.map(\.text))
-
-            // reset selection/tracking
-            selectedWord    = nil
-            selectedMeaning = nil
-            wrongWords.removeAll();     wrongMeanings.removeAll()
-            correctWords.removeAll();   correctMeanings.removeAll()
-            matchedWords.removeAll();   matchedMeanings.removeAll()
+            .navigationTitle("Holidays Puzzle")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
+            }
         }
     }
 
@@ -95,6 +102,7 @@ struct HolidayPuzzleView: View {
             .disabled(matchedWords.contains(row))
             .opacity(matchedWords.contains(row) ? 0.3 : 1)
     }
+
     private func cardViewRight(_ row: Int) -> some View {
         CardView(text: meaningCards[row].text, state: meaningState(row))
             .onTapGesture { tapMeaning(row) }
@@ -108,6 +116,7 @@ struct HolidayPuzzleView: View {
         if selectedWord == row        { return .selected }
         return .normal
     }
+
     private func meaningState(_ row: Int) -> CardView.CardState {
         if wrongMeanings.contains(row)    { return .wrong }
         if correctMeanings.contains(row)  { return .correct }
@@ -117,39 +126,41 @@ struct HolidayPuzzleView: View {
 
     private func tapWord(_ row: Int) {
         guard selectedWord == nil else { return }
-        print("[HolidayPuzzle] tapped word at row \(row)")
         selectedWord = row
     }
+
     private func tapMeaning(_ row: Int) {
         guard selectedMeaning == nil, selectedWord != nil else { return }
-        print("[HolidayPuzzle] tapped meaning at row \(row)")
         selectedMeaning = row
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            evaluate()
+            evaluatePair()
         }
     }
 
-    private func evaluate() {
+    private func evaluatePair() {
         guard let w = selectedWord, let m = selectedMeaning else { return }
-        print("[HolidayPuzzle] evaluating \(w) vs \(m)")
         if wordCards[w].matchId == meaningCards[m].matchId {
-            print(" correct")
-            correctWords.insert(w); correctMeanings.insert(m)
+            correctWords.insert(w)
+            correctMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                matchedWords.insert(w); matchedMeanings.insert(m)
-                correctWords.remove(w); correctMeanings.remove(m)
-                selectedWord = nil; selectedMeaning = nil
+                matchedWords.insert(w)
+                matchedMeanings.insert(m)
+                correctWords.remove(w)
+                correctMeanings.remove(m)
+                selectedWord = nil
+                selectedMeaning = nil
                 if matchedWords.count == wordCards.count {
-                    print("all matched → onComplete()")
                     onComplete()
                 }
             }
         } else {
-            print(" wrong")
-            wrongWords.insert(w); wrongMeanings.insert(m)
+            wrongWords.insert(w)
+            wrongMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                wrongWords.remove(w); wrongMeanings.remove(m)
-                selectedWord = nil; selectedMeaning = nil
+                wrongWords.remove(w)
+                wrongMeanings.remove(m)
+                selectedWord = nil
+                selectedMeaning = nil
             }
         }
     }

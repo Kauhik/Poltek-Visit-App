@@ -9,8 +9,8 @@
 import SwiftUI
 
 struct PlacesPuzzleView: View {
-    /// Called once 5 correct places have been answered
     var onComplete: () -> Void
+    var onBack: () -> Void
 
     @StateObject private var data = PlacesData()
     @State private var items: [PlacePair] = []
@@ -19,50 +19,54 @@ struct PlacesPuzzleView: View {
     @State private var correctCount = 0
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Places Puzzle")
-                .font(.title2)
-                .bold()
+        NavigationStack {
+            VStack(spacing: 16) {
+                Text("Places Puzzle")
+                    .font(.title2)
+                    .bold()
 
-            Text("Tap the country code for the landmark")
-                .font(.subheadline)
+                Text("Tap the country code for the landmark")
+                    .font(.subheadline)
 
-            Spacer()
+                Spacer()
 
-            if currentIndex < items.count {
-                Image(items[currentIndex].name)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 350, height: 300)   // enlarged
-                    .clipped()
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding()
+                if currentIndex < items.count {
+                    Image(items[currentIndex].name)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 350, height: 300)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding()
 
-                HStack(spacing: 24) {
-                    countryButton(code: "SG", country: "Singapore")
-                    countryButton(code: "ID", country: "Indonesia")
+                    HStack(spacing: 24) {
+                        countryButton(code: "SG", country: "Singapore")
+                        countryButton(code: "ID", country: "Indonesia")
+                    }
+                    .disabled(selection != nil)
+                } else {
+                    Text("You got \(correctCount) / 5 correct.\nTry again to get all 5 right!")
+                        .multilineTextAlignment(.center)
+                        .padding()
+                    Button("Restart") {
+                        resetQuiz()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .disabled(selection != nil)
-            } else {
-                // Out of items but not yet 5 correct: restart quiz
-                Text("You got \(correctCount) / 5 correct.\nTry again to get all 5 right!")
-                    .multilineTextAlignment(.center)
-                    .padding()
-                Button("Restart") {
-                    resetQuiz()
-                }
-                .buttonStyle(.borderedProminent)
-            }
 
-            Spacer()
-        }
-        .padding()
-        .onReceive(data.$pairs) { all in
-            guard all.count >= 5 else {
-                print("[PlacesPuzzle] Not enough items")
-                return
+                Spacer()
             }
-            startQuiz(with: all)
+            .padding()
+            .onReceive(data.$pairs) { all in
+                guard all.count >= 5 else { return }
+                startQuiz(with: all)
+            }
+            .navigationTitle("Places")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
+            }
         }
     }
 
@@ -74,7 +78,6 @@ struct PlacesPuzzleView: View {
             if correct {
                 correctCount += 1
             }
-            // move on to next picture regardless
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 currentIndex += 1
                 if correctCount >= 5 {
@@ -105,7 +108,6 @@ struct PlacesPuzzleView: View {
     }
 
     private func startQuiz(with all: [PlacePair]) {
-        // shuffle a longer list to draw from
         items = all.shuffled()
         currentIndex = 0
         selection = nil

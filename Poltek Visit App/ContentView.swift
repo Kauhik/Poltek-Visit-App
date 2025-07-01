@@ -8,9 +8,12 @@
 import SwiftUI
 
 enum Page {
-    case teamEntry, clueGrid, scannerMenu
+    case teamEntry
+    case clueGrid
+    case scannerMenu
     case scannerCamera, scannerNFC, scannerMicrophone, scannerAR
-    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
+    case puzzleSelect
+    case puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
     case codeReveal
 }
 
@@ -26,6 +29,7 @@ struct ContentView: View {
     var body: some View {
         VStack {
             switch currentPage {
+
             case .teamEntry:
                 TeamInputView(teamNumber: $teamNumber) {
                     currentPage = .clueGrid
@@ -42,62 +46,91 @@ struct ContentView: View {
             case .scannerMenu:
                 ScannerMenuView(
                     usageLeft: usageLeft,
-                    unlockedCount: unlockedLetters.count
-                ) { tech in
-                    guard (usageLeft[tech] ?? 0) > 0 else { return }
-                    switch tech {
-                    case .camera:      currentPage = .scannerCamera
-                    case .nfc:         currentPage = .scannerNFC
-                    case .microphone:  currentPage = .scannerMicrophone
-                    case .ar:          currentPage = .scannerAR
+                    unlockedCount: unlockedLetters.count,
+                    onBack: { currentPage = .clueGrid },
+                    onSelectTech: { tech in
+                        guard (usageLeft[tech] ?? 0) > 0 else { return }
+                        switch tech {
+                        case .camera:      currentPage = .scannerCamera
+                        case .nfc:         currentPage = .scannerNFC
+                        case .microphone:  currentPage = .scannerMicrophone
+                        case .ar:          currentPage = .scannerAR
+                        }
                     }
-                }
+                )
 
             case .scannerCamera:
-                CameraFeedView { completeScan() }
+                CameraFeedView(
+                    onDone: { completeScan() },
+                    onBack: { currentPage = .scannerMenu }
+                )
+
             case .scannerNFC:
-                NFCScanView { completeScan() }
+                NFCScanView(
+                    onDone: { completeScan() },
+                    onBack: { currentPage = .scannerMenu }
+                )
+
             case .scannerMicrophone:
-                MicrophoneScanView { completeScan() }
+                MicrophoneScanView(
+                    onDone: { completeScan() },
+                    onBack: { currentPage = .scannerMenu }
+                )
+
             case .scannerAR:
-                ARCameraView { completeScan() }
+                ARCameraView(
+                    onDone: { completeScan() },
+                    onBack: { currentPage = .scannerMenu }
+                )
 
             case .puzzleSelect:
-                PuzzleTypeView { choice in
-                    switch choice {
-                    case .words:      currentPage = .puzzleWords
-                    case .holidays:   currentPage = .puzzleHolidays
-                    case .dailyLife:  currentPage = .puzzleDailyLife
-                    case .dailyFood:  currentPage = .puzzleDailyFood
-                    case .places:     currentPage = .puzzlePlaces
-                    }
-                }
+                PuzzleTypeView(
+                    onSelect: { choice in
+                        switch choice {
+                        case .words:      currentPage = .puzzleWords
+                        case .holidays:   currentPage = .puzzleHolidays
+                        case .dailyLife:  currentPage = .puzzleDailyLife
+                        case .dailyFood:  currentPage = .puzzleDailyFood
+                        case .places:     currentPage = .puzzlePlaces
+                        }
+                    },
+                    onBack: { currentPage = .clueGrid }
+                )
 
             case .puzzleWords:
-                MatchingPuzzleView {
-                    currentPage = .codeReveal
-                }
+                MatchingPuzzleView(
+                    onComplete: { currentPage = .codeReveal },
+                    onBack:     { currentPage = .puzzleSelect }
+                )
+
             case .puzzleHolidays:
-                HolidayPuzzleView {
-                    currentPage = .codeReveal
-                }
+                HolidayPuzzleView(
+                    onComplete: { currentPage = .codeReveal },
+                    onBack:     { currentPage = .puzzleSelect }
+                )
+
             case .puzzleDailyLife:
-                DailyLifePuzzleView {
-                    currentPage = .codeReveal
-                }
+                DailyLifePuzzleView(
+                    onComplete: { currentPage = .codeReveal },
+                    onBack:     { currentPage = .puzzleSelect }
+                )
+
             case .puzzleDailyFood:
-                DailyFoodPuzzleView {
-                    currentPage = .codeReveal
-                }
+                DailyFoodPuzzleView(
+                    onComplete: { currentPage = .codeReveal },
+                    onBack:     { currentPage = .puzzleSelect }
+                )
+
             case .puzzlePlaces:
-                PlacesPuzzleView {
-                    currentPage = .codeReveal
-                }
+                PlacesPuzzleView(
+                    onComplete: { currentPage = .codeReveal },
+                    onBack:     { currentPage = .puzzleSelect }
+                )
 
             case .codeReveal:
-                CodeView {
-                    currentPage = .clueGrid
-                }
+                CodeView(
+                    onDone: { currentPage = .clueGrid }
+                )
             }
         }
         .animation(.default, value: currentPage)
@@ -113,10 +146,13 @@ struct ContentView: View {
         case .scannerAR:          tech = .ar
         default: return
         }
+
         usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
+
         if unlockedLetters.count < allLetters.count {
             unlockedLetters.append(allLetters[unlockedLetters.count])
         }
+
         currentPage = .puzzleSelect
     }
 }

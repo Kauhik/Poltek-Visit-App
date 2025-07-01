@@ -5,19 +5,13 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
-import Foundation
 import SwiftUI
-
-fileprivate struct CardItem: Identifiable {
-    let id: Int
-    let text: String
-    let matchId: Int
-}
 
 struct DailyLifePuzzleView: View {
     var onComplete: () -> Void
-    @StateObject private var data = DailyLifeData()
+    var onBack: () -> Void
 
+    @StateObject private var data = DailyLifeData()
     @State private var wordCards: [CardItem]    = []
     @State private var meaningCards: [CardItem] = []
     @State private var selectedWord: Int?       = nil
@@ -30,62 +24,69 @@ struct DailyLifePuzzleView: View {
     @State private var matchedMeanings: Set<Int> = []
 
     var body: some View {
-        VStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Daily Life Puzzle")
-                    .font(.title2).bold()
-                Text("Tap the matching pairs")
-                    .font(.subheadline)
-            }
-            .padding(.horizontal)
+        NavigationStack {
+            VStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Daily Life Puzzle")
+                        .font(.title2).bold()
+                    Text("Tap the matching pairs")
+                        .font(.subheadline)
+                }
+                .padding(.horizontal)
 
-            VStack(spacing: 12) {
-                ForEach(0..<wordCards.count, id: \.self) { row in
-                    HStack(spacing: 12) {
-                        cardViewLeft(row)
-                        cardViewRight(row)
+                VStack(spacing: 12) {
+                    ForEach(0..<wordCards.count, id: \.self) { row in
+                        HStack(spacing: 12) {
+                            cardViewLeft(row)
+                            cardViewRight(row)
+                        }
                     }
                 }
+                .padding(.horizontal)
+
+                Spacer()
             }
-            .padding(.horizontal)
-        }
-        .onReceive(data.$pairs) { all in
-            print("\n[DailyLifePuzzle] raw pairs:", all.count)
-            let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
-            print("[DailyLifePuzzle] after filter:", filtered.count)
-            let origins = Set(filtered.map(\.origin))
-            let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
-            print("[DailyLifePuzzle] origins:", origins, "needMix:", needMix)
+            .onReceive(data.$pairs) { all in
+                let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
+                let origins = Set(filtered.map(\.origin))
+                let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
 
-            let chosen: [DailyLifePair]
-            if needMix && filtered.count >= 5 {
-                var tmp: [DailyLifePair]
-                repeat {
-                    tmp = Array(filtered.shuffled().prefix(5))
-                } while !(
-                    tmp.contains(where:{ $0.origin=="Singapore" }) &&
-                    tmp.contains(where:{ $0.origin=="Indonesia" })
-                )
-                chosen = tmp
-            } else {
-                chosen = Array(filtered.shuffled().prefix(5))
+                let chosen: [DailyLifePair]
+                if needMix && filtered.count >= 5 {
+                    var tmp: [DailyLifePair]
+                    repeat {
+                        tmp = Array(filtered.shuffled().prefix(5))
+                    } while !(
+                        tmp.contains(where:{ $0.origin=="Singapore" }) &&
+                        tmp.contains(where:{ $0.origin=="Indonesia" })
+                    )
+                    chosen = tmp
+                } else {
+                    chosen = Array(filtered.shuffled().prefix(5))
+                }
+
+                wordCards    = chosen.map {
+                    CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id)
+                }.shuffled()
+                meaningCards = chosen.map {
+                    CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id)
+                }.shuffled()
+
+                selectedWord = nil
+                selectedMeaning = nil
+                wrongWords.removeAll()
+                wrongMeanings.removeAll()
+                correctWords.removeAll()
+                correctMeanings.removeAll()
+                matchedWords.removeAll()
+                matchedMeanings.removeAll()
             }
-            print("[DailyLifePuzzle] chosen 5:", chosen.map { "\($0.word)/\($0.origin)" })
-
-            wordCards    = chosen.map {
-                CardItem(id:$0.id*2,   text:$0.word,    matchId:$0.id)
-            }.shuffled()
-            meaningCards = chosen.map {
-                CardItem(id:$0.id*2+1, text:$0.meaning, matchId:$0.id)
-            }.shuffled()
-            print("[DailyLifePuzzle] words:", wordCards.map(\.text))
-            print("[DailyLifePuzzle] meanings:", meaningCards.map(\.text))
-
-            selectedWord = nil
-            selectedMeaning = nil
-            wrongWords.removeAll();     wrongMeanings.removeAll()
-            correctWords.removeAll();   correctMeanings.removeAll()
-            matchedWords.removeAll();   matchedMeanings.removeAll()
+            .navigationTitle("Daily Life")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
+            }
         }
     }
 
@@ -95,6 +96,7 @@ struct DailyLifePuzzleView: View {
             .disabled(matchedWords.contains(row))
             .opacity(matchedWords.contains(row) ? 0.3 : 1)
     }
+
     private func cardViewRight(_ row: Int) -> some View {
         CardView(text: meaningCards[row].text, state: meaningState(row))
             .onTapGesture { tapMeaning(row) }
@@ -108,6 +110,7 @@ struct DailyLifePuzzleView: View {
         if selectedWord == row        { return .selected }
         return .normal
     }
+
     private func meaningState(_ row: Int) -> CardView.CardState {
         if wrongMeanings.contains(row)   { return .wrong }
         if correctMeanings.contains(row) { return .correct }
@@ -117,34 +120,30 @@ struct DailyLifePuzzleView: View {
 
     private func tapWord(_ row: Int) {
         guard selectedWord == nil else { return }
-        print("[DailyLifePuzzle] tapped word \(row)")
         selectedWord = row
     }
+
     private func tapMeaning(_ row: Int) {
         guard selectedMeaning == nil, selectedWord != nil else { return }
-        print("[DailyLifePuzzle] tapped meaning \(row)")
         selectedMeaning = row
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             evaluate()
         }
     }
+
     private func evaluate() {
         guard let w = selectedWord, let m = selectedMeaning else { return }
-        print("[DailyLifePuzzle] evaluating \(w) vs \(m)")
         if wordCards[w].matchId == meaningCards[m].matchId {
-            print(" correct")
             correctWords.insert(w); correctMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 matchedWords.insert(w); matchedMeanings.insert(m)
                 correctWords.remove(w); correctMeanings.remove(m)
                 selectedWord = nil; selectedMeaning = nil
                 if matchedWords.count == wordCards.count {
-                    print(" all matched → onComplete()")
                     onComplete()
                 }
             }
         } else {
-            print(" wrong")
             wrongWords.insert(w); wrongMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 wrongWords.remove(w); wrongMeanings.remove(m)
@@ -152,6 +151,12 @@ struct DailyLifePuzzleView: View {
             }
         }
     }
+}
+
+fileprivate struct CardItem: Identifiable {
+    let id: Int
+    let text: String
+    let matchId: Int
 }
 
 fileprivate struct CardView: View {

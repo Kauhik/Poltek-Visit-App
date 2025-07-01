@@ -19,24 +19,35 @@ enum PuzzleType: String, CaseIterable, Identifiable {
 
 struct PuzzleTypeView: View {
     var onSelect: (PuzzleType) -> Void
+    var onBack: ()->Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Choose Puzzle Type")
-                .font(.title2).bold()
-            ForEach(PuzzleType.allCases) { type in
-                Button(type.rawValue) {
-                    onSelect(type)
+        NavigationStack {
+            VStack(spacing: 24) {
+                Text("Choose Puzzle Type")
+                    .font(.title2).bold()
+
+                ForEach(PuzzleType.allCases) { type in
+                    Button(type.rawValue) {
+                        onSelect(type)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.orange, lineWidth: 1)
+                    )
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange, lineWidth: 1)
-                )
+                Spacer()
             }
+            .navigationTitle("Select Puzzle")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
+            }
+            .padding()
         }
-        .padding()
     }
 }
