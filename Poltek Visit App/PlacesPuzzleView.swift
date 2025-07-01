@@ -9,13 +9,14 @@
 import SwiftUI
 
 struct PlacesPuzzleView: View {
-    /// Called once all 5 places have been answered
+    /// Called once 5 correct places have been answered
     var onComplete: () -> Void
 
     @StateObject private var data = PlacesData()
     @State private var items: [PlacePair] = []
     @State private var currentIndex = 0
     @State private var selection: String? = nil
+    @State private var correctCount = 0
 
     var body: some View {
         VStack(spacing: 16) {
@@ -32,7 +33,7 @@ struct PlacesPuzzleView: View {
                 Image(items[currentIndex].name)
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 300, height: 250)
+                    .frame(width: 350, height: 300)   // enlarged
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding()
@@ -42,6 +43,15 @@ struct PlacesPuzzleView: View {
                     countryButton(code: "ID", country: "Indonesia")
                 }
                 .disabled(selection != nil)
+            } else {
+                // Out of items but not yet 5 correct: restart quiz
+                Text("You got \(correctCount) / 5 correct.\nTry again to get all 5 right!")
+                    .multilineTextAlignment(.center)
+                    .padding()
+                Button("Restart") {
+                    resetQuiz()
+                }
+                .buttonStyle(.borderedProminent)
             }
 
             Spacer()
@@ -52,30 +62,23 @@ struct PlacesPuzzleView: View {
                 print("[PlacesPuzzle] Not enough items")
                 return
             }
-            // pick 5 with at least one SG and one ID
-            var chosen: [PlacePair]
-            repeat {
-                chosen = Array(all.shuffled().prefix(5))
-            } while !(
-                chosen.contains(where: { $0.origin == "Singapore" }) &&
-                chosen.contains(where: { $0.origin == "Indonesia" })
-            )
-            items = chosen
-            currentIndex = 0
-            selection = nil
+            startQuiz(with: all)
         }
     }
 
     private func countryButton(code: String, country: String) -> some View {
         Button(action: {
+            guard selection == nil else { return }
             selection = country
             let correct = (items[currentIndex].origin == country)
+            if correct {
+                correctCount += 1
+            }
+            // move on to next picture regardless
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if correct {
-                    currentIndex += 1
-                    if currentIndex >= items.count {
-                        onComplete()
-                    }
+                currentIndex += 1
+                if correctCount >= 5 {
+                    onComplete()
                 }
                 selection = nil
             }
@@ -99,5 +102,19 @@ struct PlacesPuzzleView: View {
         return sel == items[currentIndex].origin
             ? Color.green.opacity(0.5)
             : Color.red.opacity(0.5)
+    }
+
+    private func startQuiz(with all: [PlacePair]) {
+        // shuffle a longer list to draw from
+        items = all.shuffled()
+        currentIndex = 0
+        selection = nil
+        correctCount = 0
+    }
+
+    private func resetQuiz() {
+        if !data.pairs.isEmpty {
+            startQuiz(with: data.pairs)
+        }
     }
 }
