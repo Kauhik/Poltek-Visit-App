@@ -10,7 +10,8 @@ import SwiftUI
 enum Page {
     case teamEntry, clueGrid, scannerMenu
     case scannerCamera, scannerNFC, scannerMicrophone, scannerAR
-    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, codeReveal
+    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
+    case codeReveal
 }
 
 struct ContentView: View {
@@ -68,6 +69,7 @@ struct ContentView: View {
                     case .holidays:   currentPage = .puzzleHolidays
                     case .dailyLife:  currentPage = .puzzleDailyLife
                     case .dailyFood:  currentPage = .puzzleDailyFood
+                    case .places:     currentPage = .puzzlePlaces
                     }
                 }
 
@@ -85,6 +87,10 @@ struct ContentView: View {
                 }
             case .puzzleDailyFood:
                 DailyFoodPuzzleView {
+                    currentPage = .codeReveal
+                }
+            case .puzzlePlaces:
+                PlacesPuzzleView {
                     currentPage = .codeReveal
                 }
 
