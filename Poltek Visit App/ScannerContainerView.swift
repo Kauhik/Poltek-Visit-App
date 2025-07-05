@@ -128,7 +128,7 @@ struct ScannerContainerView: View {
             case .scan:    return "camera"
             case .listen:  return "mic.fill"
             case .move:    return "figure.walk"
-            case .nfc:     return "nfc"
+            case .nfc:     return "wave.3.right"
             }
         }
 
