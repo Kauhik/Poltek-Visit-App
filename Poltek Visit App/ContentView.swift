@@ -10,8 +10,7 @@ import SwiftUI
 enum Page {
     case teamEntry
     case clueGrid
-    case scannerMenu
-    case scannerCamera, scannerNFC, scannerMicrophone, scannerAR
+    case scanner
     case puzzleSelect
     case puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
     case codeReveal
@@ -20,69 +19,39 @@ enum Page {
 struct ContentView: View {
     @State private var currentPage: Page = .teamEntry
     @State private var teamNumber: String = ""
-    @State private var usageLeft: [ScanTech:Int] = .init(
+    
+    /// How many scans remain per tech
+    @State private var usageLeft: [ScanTech:Int] = Dictionary(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
+    
     @State private var unlockedLetters: [String] = []
     private let allLetters = ["A","B","C","D","E"]
-
+    
     var body: some View {
         VStack {
             switch currentPage {
-
+            
             case .teamEntry:
                 TeamInputView(teamNumber: $teamNumber) {
                     currentPage = .clueGrid
                 }
-
+                
             case .clueGrid:
                 ClueListView(
                     teamNumber: teamNumber,
                     unlockedLetters: Set(unlockedLetters),
-                    onScan: { currentPage = .scannerMenu },
+                    onScan: { currentPage = .scanner },
                     onSelect: { _ in currentPage = .puzzleSelect }
                 )
-
-            case .scannerMenu:
-                ScannerMenuView(
+                
+            case .scanner:
+                ScannerContainerView(
                     usageLeft: usageLeft,
-                    unlockedCount: unlockedLetters.count,
                     onBack: { currentPage = .clueGrid },
-                    onSelectTech: { tech in
-                        guard (usageLeft[tech] ?? 0) > 0 else { return }
-                        switch tech {
-                        case .camera:      currentPage = .scannerCamera
-                        case .nfc:         currentPage = .scannerNFC
-                        case .microphone:  currentPage = .scannerMicrophone
-                        case .ar:          currentPage = .scannerAR
-                        }
-                    }
+                    onDone: { tech in completeScan(with: tech) }
                 )
-
-            case .scannerCamera:
-                CameraFeedView(
-                    onDone: { completeScan() },
-                    onBack: { currentPage = .scannerMenu }
-                )
-
-            case .scannerNFC:
-                NFCScanView(
-                    onDone: { completeScan() },
-                    onBack: { currentPage = .scannerMenu }
-                )
-
-            case .scannerMicrophone:
-                MicrophoneScanView(
-                    onDone: { completeScan() },
-                    onBack: { currentPage = .scannerMenu }
-                )
-
-            case .scannerAR:
-                ARCameraView(
-                    onDone: { completeScan() },
-                    onBack: { currentPage = .scannerMenu }
-                )
-
+                
             case .puzzleSelect:
                 PuzzleTypeView(
                     onSelect: { choice in
@@ -94,65 +63,70 @@ struct ContentView: View {
                         case .places:     currentPage = .puzzlePlaces
                         }
                     },
-                    onBack: { currentPage = .clueGrid }
+                    // Back from puzzle‐select goes to the scanner nav-bar
+                    onBack: { currentPage = .scanner }
                 )
-
+                
             case .puzzleWords:
                 MatchingPuzzleView(
                     onComplete: { currentPage = .codeReveal },
                     onBack:     { currentPage = .puzzleSelect }
                 )
-
+                
             case .puzzleHolidays:
                 HolidayPuzzleView(
                     onComplete: { currentPage = .codeReveal },
                     onBack:     { currentPage = .puzzleSelect }
                 )
-
+                
             case .puzzleDailyLife:
                 DailyLifePuzzleView(
                     onComplete: { currentPage = .codeReveal },
                     onBack:     { currentPage = .puzzleSelect }
                 )
-
+                
             case .puzzleDailyFood:
                 DailyFoodPuzzleView(
                     onComplete: { currentPage = .codeReveal },
                     onBack:     { currentPage = .puzzleSelect }
                 )
-
+                
             case .puzzlePlaces:
                 PlacesPuzzleView(
                     onComplete: { currentPage = .codeReveal },
                     onBack:     { currentPage = .puzzleSelect }
                 )
-
+                
             case .codeReveal:
                 CodeView(
-                    onDone: { currentPage = .clueGrid }
+                    // Only when user taps “Back to Clues” here do we unlock the next letter
+                    onDone: { completePuzzle() }
                 )
             }
         }
         .animation(.default, value: currentPage)
         .padding()
     }
-
-    private func completeScan() {
-        let tech: ScanTech
-        switch currentPage {
-        case .scannerCamera:      tech = .camera
-        case .scannerNFC:         tech = .nfc
-        case .scannerMicrophone:  tech = .microphone
-        case .scannerAR:          tech = .ar
-        default: return
-        }
-
+    
+    /// Called when the user finishes a scan.
+    /// Decrements usage but does NOT unlock a letter yet.
+    private func completeScan(with tech: ScanTech) {
         usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
-
+        currentPage = .puzzleSelect
+    }
+    
+    /// Called when the user actually finishes a puzzle (in CodeView).
+    /// Unlocks the next letter and returns to the clues grid.
+    private func completePuzzle() {
         if unlockedLetters.count < allLetters.count {
             unlockedLetters.append(allLetters[unlockedLetters.count])
         }
+        currentPage = .clueGrid
+    }
+}
 
-        currentPage = .puzzleSelect
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
     }
 }
