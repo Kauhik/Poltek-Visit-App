@@ -5,148 +5,141 @@
 //  Created by Kaushik Manian on 5/7/25.
 //
 
-import Foundation
 import SwiftUI
 
-/// A single view that lets the user swipe between
-/// Camera, NFC, Microphone, and AR scan modes,
-/// with a bottom icon bar and a Back button.
 struct ScannerContainerView: View {
-    @State private var selectedTech: ScanTech = .camera
     let usageLeft: [ScanTech:Int]
     var onBack: () -> Void
-    /// Called when the user taps Done; passes the tech that was used
-    var onDone: (ScanTech) -> Void
+    var onNext: (ScanTech) -> Void
+
+    @State private var selectedTab: Tab = .qr
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Swipeable pages
-                TabView(selection: $selectedTech) {
-                    cameraPage.tag(ScanTech.camera)
-                    nfcPage.tag(ScanTech.nfc)
-                    microphonePage.tag(ScanTech.microphone)
-                    arPage.tag(ScanTech.ar)
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+        GeometryReader { proxy in
+            ZStack {
+                Color.black
+                    .ignoresSafeArea()
 
-                Divider()
-
-                // Bottom icon bar
-                HStack {
-                    ForEach(ScanTech.allCases) { tech in
-                        Button(action: { selectedTech = tech }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: tech.icon)
-                                    .font(.title2)
-                                Text(tech.name)
-                                    .font(.caption)
-                            }
-                            .foregroundColor(selectedTech == tech ? .blue : .gray)
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
-                }
-                .padding(.vertical, 8)
-                .background(Color(UIColor.secondarySystemBackground))
-            }
-            .navigationTitle("Scanner")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: onBack) {
-                        HStack(spacing: 4) {
+                VStack(spacing: 0) {
+                    HStack {
+                        Button(action: onBack) {
                             Image(systemName: "chevron.left")
-                            Text("Back")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(.black)
+                        }
+                        .frame(width: 44, height: 44)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        .padding(.top, proxy.safeAreaInsets.top + 80)
+                        .padding(.leading, 24)
+
+                        Spacer()
+                    }
+
+                    Spacer()
+
+                    Group {
+                        switch selectedTab {
+                        case .qr:
+                            Image(systemName: "qrcode.viewfinder")
+                                .font(.system(size: 80))
+                            Text("Scan QR Code")
+                        case .scan:
+                            Image(systemName: "camera")
+                                .font(.system(size: 80))
+                            Text("Visual clue")
+                        case .listen:
+                            Image(systemName: "mic.fill")
+                                .font(.system(size: 80))
+                            Text("Listening to audio")
+                        case .move:
+                            Image(systemName: "figure.walk")
+                                .font(.system(size: 80))
+                            Text("AR Action Clue")
+                        case .nfc:
+                            Image(systemName: "nfc")
+                                .font(.system(size: 80))
+                            Text("Hold near NFC tag")
                         }
                     }
+                    .foregroundColor(.white)
+                    .font(.title2)
+                    .multilineTextAlignment(.center)
+
+                    Spacer()
+
+                    // Development-only Next button
+                    Button("Next") {
+                        onNext(selectedTab.tech)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .disabled((usageLeft[selectedTab.tech] ?? 0) <= 0)
+
+                    Spacer(minLength: 16)
+
+                    Divider().background(Color.gray)
+
+                    HStack {
+                        ForEach(Tab.allCases, id: \.self) { tab in
+                            Button(action: { selectedTab = tab }) {
+                                VStack(spacing: 4) {
+                                    Image(systemName: tab.iconName)
+                                        .font(.system(size: 20))
+                                    Text(tab.label)
+                                        .font(.caption2)
+                                }
+                                .foregroundColor(
+                                    selectedTab == tab
+                                        ? Color(.systemTeal)
+                                        : Color.gray
+                                )
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                    }
+                    .frame(height: 100)
+                    .padding(.bottom, proxy.safeAreaInsets.bottom > 0
+                             ? proxy.safeAreaInsets.bottom
+                             : 16)
+                    .background(Color(.systemGray5))
                 }
             }
         }
     }
 
-    // MARK: - Pages
+    private enum Tab: CaseIterable {
+        case qr, scan, listen, move, nfc
 
-    private var cameraPage: some View {
-        VStack {
-            Spacer()
-            Text("Use the camera to scan")
-                .font(.title2)
-            Spacer()
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .cornerRadius(12)
-                .overlay(Text("Camera Feed Placeholder"))
-                .frame(height: 300)
-            Spacer()
-            Button("Done") {
-                onDone(.camera)
+        var label: String {
+            switch self {
+            case .qr:      return "QR Code"
+            case .scan:    return "Scan"
+            case .listen:  return "Listen"
+            case .move:    return "Move"
+            case .nfc:     return "NFC"
             }
-            .buttonStyle(.borderedProminent)
-            .disabled((usageLeft[.camera] ?? 0) <= 0)
-            Spacer()
         }
-        .padding()
-    }
 
-    private var nfcPage: some View {
-        VStack {
-            Spacer()
-            Text("Hold near NFC tag")
-                .font(.title2)
-            Spacer()
-            Image(systemName: "nfc")
-                .font(.system(size: 100))
-            Spacer()
-            Button("Done") {
-                onDone(.nfc)
+        var iconName: String {
+            switch self {
+            case .qr:      return "qrcode"
+            case .scan:    return "camera"
+            case .listen:  return "mic.fill"
+            case .move:    return "figure.walk"
+            case .nfc:     return "nfc"
             }
-            .buttonStyle(.borderedProminent)
-            .disabled((usageLeft[.nfc] ?? 0) <= 0)
-            Spacer()
         }
-        .padding()
-    }
 
-    private var microphonePage: some View {
-        VStack {
-            Spacer()
-            Text("Listening to audio")
-                .font(.title2)
-            Spacer()
-            Image(systemName: "mic.fill")
-                .font(.system(size: 100))
-            Spacer()
-            Button("Done") {
-                onDone(.microphone)
+        var tech: ScanTech {
+            switch self {
+            case .qr, .scan: return .camera
+            case .listen:    return .microphone
+            case .move:      return .ar
+            case .nfc:       return .nfc
             }
-            .buttonStyle(.borderedProminent)
-            .disabled((usageLeft[.microphone] ?? 0) <= 0)
-            Spacer()
         }
-        .padding()
-    }
-
-    private var arPage: some View {
-        VStack {
-            Spacer()
-            Text("AR Camera")
-                .font(.title2)
-            Spacer()
-            Rectangle()
-                .fill(Color.blue.opacity(0.2))
-                .cornerRadius(12)
-                .overlay(Text("AR Camera Placeholder"))
-                .frame(height: 300)
-            Spacer()
-            Button("Done") {
-                onDone(.ar)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled((usageLeft[.ar] ?? 0) <= 0)
-            Spacer()
-        }
-        .padding()
     }
 }
 
@@ -155,7 +148,7 @@ struct ScannerContainerView_Previews: PreviewProvider {
         ScannerContainerView(
             usageLeft: Dictionary(uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }),
             onBack: {},
-            onDone: { _ in }
+            onNext: { _ in }
         )
     }
 }
