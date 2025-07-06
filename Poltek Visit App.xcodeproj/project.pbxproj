@@ -38,6 +38,7 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				PoltekAudio.mlmodel,
 			);
 			target = 80EAFAE62E0E413E008CDB45 /* Poltek Visit AppTests */;
 		};
@@ -49,6 +50,7 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				PoltekAudio.mlmodel,
 			);
 			target = 80EAFAF02E0E413E008CDB45 /* Poltek Visit AppUITests */;
 		};
@@ -428,6 +430,7 @@
 				DEVELOPMENT_TEAM = Z8PS8WLYZ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This application would like access to the microphone to detect and display sounds occurring in the environment.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -458,6 +461,7 @@
 				DEVELOPMENT_TEAM = Z8PS8WLYZ6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This application would like access to the microphone to detect and display sounds occurring in the environment.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

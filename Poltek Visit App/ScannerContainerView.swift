@@ -21,6 +21,7 @@ struct ScannerContainerView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    // MARK: Back button
                     HStack {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
@@ -31,32 +32,38 @@ struct ScannerContainerView: View {
                         .background(Color.white)
                         .clipShape(Circle())
                         .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        .padding(.top, proxy.safeAreaInsets.top + 80)
-                        .padding(.leading, 24)
+                        .padding(.top, proxy.safeAreaInsets.top + 60)
+                        .padding(.leading, 14)
 
                         Spacer()
                     }
 
                     Spacer()
 
+                    // MARK: Main content per tab
                     Group {
                         switch selectedTab {
                         case .qr:
                             Image(systemName: "qrcode.viewfinder")
                                 .font(.system(size: 80))
                             Text("Scan QR Code")
+
                         case .scan:
                             Image(systemName: "camera")
                                 .font(.system(size: 80))
                             Text("Visual clue")
+
                         case .listen:
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 80))
-                            Text("Listening to audio")
+                            ListenDetectionView(
+                                onAllDetected: { onNext(.microphone) },
+                                onNext:       { onNext(.microphone) }
+                            )
+
                         case .move:
                             Image(systemName: "figure.walk")
                                 .font(.system(size: 80))
                             Text("AR Action Clue")
+
                         case .nfc:
                             Image(systemName: "nfc")
                                 .font(.system(size: 80))
@@ -69,18 +76,21 @@ struct ScannerContainerView: View {
 
                     Spacer()
 
-                    // Development-only Next button
-                    Button("Next") {
-                        onNext(selectedTab.tech)
+                    // MARK: “Next” button for non‐listen tabs
+                    if selectedTab != .listen {
+                        Button("Next") {
+                            onNext(selectedTab.tech)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .disabled((usageLeft[selectedTab.tech] ?? 0) <= 0)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                    .disabled((usageLeft[selectedTab.tech] ?? 0) <= 0)
 
                     Spacer(minLength: 16)
 
                     Divider().background(Color.gray)
 
+                    // MARK: Bottom tab bar
                     HStack {
                         ForEach(Tab.allCases, id: \.self) { tab in
                             Button(action: { selectedTab = tab }) {
@@ -99,10 +109,9 @@ struct ScannerContainerView: View {
                             }
                         }
                     }
-                    .frame(height: 100)
-                    .padding(.bottom, proxy.safeAreaInsets.bottom > 0
-                             ? proxy.safeAreaInsets.bottom
-                             : 16)
+                    .frame(height: 80)
+                    .padding(.bottom,
+                             max(proxy.safeAreaInsets.bottom, 12))
                     .background(Color(.systemGray5))
                 }
             }
@@ -128,7 +137,7 @@ struct ScannerContainerView: View {
             case .scan:    return "camera"
             case .listen:  return "mic.fill"
             case .move:    return "figure.walk"
-            case .nfc:     return "wave.3.right"
+            case .nfc:     return "nfc"
             }
         }
 
@@ -146,7 +155,9 @@ struct ScannerContainerView: View {
 struct ScannerContainerView_Previews: PreviewProvider {
     static var previews: some View {
         ScannerContainerView(
-            usageLeft: Dictionary(uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }),
+            usageLeft: Dictionary(
+                uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
+            ),
             onBack: {},
             onNext: { _ in }
         )
