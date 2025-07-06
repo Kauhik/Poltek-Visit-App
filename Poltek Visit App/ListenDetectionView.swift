@@ -15,7 +15,6 @@ public enum SoundIdentifier: String, CaseIterable {
     case doorsClosing     = "SMRT Doors Closing"
     case pedestrianButton = "Singapore Pedestrian Crossing Button"
     case wallKeliling     = "Suara Es Krim Wall's Keliling"
-
     public var displayName: String { rawValue }
 }
 
@@ -24,25 +23,21 @@ public struct DetectionState {
     public var currentConfidence: Double = 0
 }
 
-/// Drives the 1×4 grid of bars by listening for high-confidence hits.
+/// Manages the classifier + raw results → binary “found” states.
 public class ListenDetectionManager: ObservableObject {
     @Published public var detectionStates: [(SoundIdentifier, DetectionState)]
-
     private var classifier: SystemAudioClassifier?
     private let detectionThreshold: Double = 0.8
 
     public init() {
-        // start all four at zero
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
         restart()
     }
 
-    /// Reset all bars → 0 and restart the classifier.
     public func restart() {
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
         classifier?.stop()
         classifier = nil
-
         let new = SystemAudioClassifier()
         new.delegate = self
         classifier = new
@@ -52,7 +47,6 @@ public class ListenDetectionManager: ObservableObject {
 
 extension ListenDetectionManager: AudioClassificationDelegate {
     public func classificationDidUpdate(label: String, confidence: Double) {
-        // ignore low-confidence guesses
         guard
             confidence >= detectionThreshold,
             let id = SoundIdentifier(rawValue: label),
@@ -60,7 +54,6 @@ extension ListenDetectionManager: AudioClassificationDelegate {
         else { return }
 
         DispatchQueue.main.async {
-            // mark that bar fully “found”
             self.detectionStates[idx].1.currentConfidence = 1.0
         }
     }
@@ -69,8 +62,14 @@ extension ListenDetectionManager: AudioClassificationDelegate {
 /// The SwiftUI view showing mic icon, 4 bars, and “Next” button.
 public struct ListenDetectionView: View {
     @StateObject private var manager = ListenDetectionManager()
+
+    /// Called after the 1 second buffer once all four detect.
     public var onAllDetected: () -> Void
+    /// Manual override
     public var onNext: () -> Void
+
+    /// Tracks whether we’ve already scheduled the auto-advance
+    @State private var didScheduleAdvance = false
 
     public init(
         onAllDetected: @escaping () -> Void,
@@ -108,15 +107,20 @@ public struct ListenDetectionView: View {
                 .tint(.blue)
         }
         .padding(.horizontal, 16)
-        // Auto-advance when all four are “found”
+        .onAppear {
+            didScheduleAdvance = false
+            manager.restart()
+        }
         .onReceive(manager.$detectionStates) { states in
-            if states.allSatisfy({ $0.1.currentConfidence >= 1.0 }) {
+            // once all four are 1.0, schedule exactly once
+            guard !didScheduleAdvance,
+                  states.allSatisfy({ $0.1.currentConfidence >= 1.0 })
+            else { return }
+
+            didScheduleAdvance = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 onAllDetected()
             }
-        }
-        // Reset + kick off listening each time this view appears
-        .onAppear {
-            manager.restart()
         }
     }
 }
