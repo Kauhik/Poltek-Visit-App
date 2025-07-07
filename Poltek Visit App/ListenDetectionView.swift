@@ -81,7 +81,7 @@ public struct ListenDetectionView: View {
 
     public var body: some View {
         VStack(spacing: 24) {
-            Image(systemName: "mic.fill")
+            Image(systemName: "waveform.circle")
                 .font(.system(size: 80))
             Text("Listening to audio")
                 .foregroundColor(.white)
