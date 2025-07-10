@@ -16,6 +16,7 @@ class PreviewView: UIView {
 }
 
 struct QRScannerView: UIViewRepresentable {
+    /// Called with the decoded QR string whenever a code is found
     var completion: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -113,18 +114,22 @@ struct QRScannerView: UIViewRepresentable {
             let length = min(rect.width, rect.height) * 0.2
             let path = UIBezierPath()
 
+            // top-left
             path.move(to: CGPoint(x: rect.minX, y: rect.minY + length))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.minX + length, y: rect.minY))
 
+            // top-right
             path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
 
+            // bottom-right
             path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
 
+            // bottom-left
             path.move(to: CGPoint(x: rect.minX + length, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))

@@ -14,9 +14,10 @@ struct ScannerContainerView: View {
     var onNext: (ScanTech) -> Void
 
     @State private var selectedTab: Tab = .qr
-    @State private var scannedCode: String? = nil
     @State private var discoveredClues: Set<Int> = []
+    @State private var didScheduleCompletion = false
 
+    // The five valid QR URLs in order
     private let qrClueURLs = [
         "https://qrs.ly/bkgtv1h",
         "https://qrs.ly/ntgtv2j",
@@ -51,24 +52,19 @@ struct ScannerContainerView: View {
         case .qr:
             ZStack {
                 QRScannerView { code in
-                    scannedCode = code
                     if let idx = qrClueURLs.firstIndex(of: code) {
                         discoveredClues.insert(idx + 1)
                     }
                 }
 
-                // bottom clue labels, same style as scan & listen
+                // bottom clue labels (same style as Scan & Listen)
                 VStack {
                     Spacer()
                     HStack(spacing: 8) {
                         ForEach(1...5, id: \.self) { idx in
                             Text("Clue \(idx)")
                                 .font(.caption)
-                                .foregroundColor(
-                                    discoveredClues.contains(idx)
-                                        ? .white
-                                        : .gray
-                                )
+                                .foregroundColor(discoveredClues.contains(idx) ? .white : .gray)
                                 .padding(6)
                                 .background(Color.black.opacity(0.5))
                                 .cornerRadius(4)
@@ -77,22 +73,12 @@ struct ScannerContainerView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                 }
-
-                // scanned-code result
-                if let code = scannedCode {
-                    VStack {
-                        Spacer()
-                        VStack(spacing: 6) {
-                            Text("Scanned QR Code:")
-                                .font(.headline)
-                            Text(code)
-                                .font(.body)
-                                .multilineTextAlignment(.center)
-                        }
-                        .padding()
-                        .background(Color.white.opacity(0.8))
-                        .cornerRadius(12)
-                        .padding(.bottom, 60)
+            }
+            .onChange(of: discoveredClues) { newSet in
+                if newSet.count == 5 && !didScheduleCompletion {
+                    didScheduleCompletion = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        onNext(.camera)
                     }
                 }
             }
@@ -133,8 +119,7 @@ struct ScannerContainerView: View {
                             Circle()
                                 .fill(Color.white)
                                 .frame(width: 44, height: 44)
-                                .shadow(color: Color.black.opacity(0.2),
-                                        radius: 4, x: 0, y: 2)
+                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(.black)
@@ -216,8 +201,6 @@ struct ScannerContainerView: View {
         }
     }
 }
-
-
 
 struct ScannerContainerView_Previews: PreviewProvider {
     static var previews: some View {
