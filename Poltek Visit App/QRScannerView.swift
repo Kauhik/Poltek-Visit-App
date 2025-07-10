@@ -5,10 +5,10 @@
 //  Created by Kaushik Manian on 10/7/25.
 //
 
-import Foundation
 import SwiftUI
 import AVFoundation
 
+// A UIView whose backing layer is AVCaptureVideoPreviewLayer
 class PreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
@@ -17,6 +17,7 @@ class PreviewView: UIView {
 }
 
 struct QRScannerView: UIViewRepresentable {
+    /// Called with the decoded QR string whenever a code is found
     var completion: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -32,6 +33,7 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PreviewView, context: Context) {
+        // Ensure preview layer always fills the view
         context.coordinator.previewView?.videoPreviewLayer.frame = uiView.bounds
     }
 
@@ -47,6 +49,10 @@ struct QRScannerView: UIViewRepresentable {
             bracketLayer.strokeColor = UIColor.yellow.cgColor
             bracketLayer.lineWidth = 4
             bracketLayer.fillColor = UIColor.clear.cgColor
+            // Rounded corners on the bracket joints
+            bracketLayer.lineJoin = .round
+            bracketLayer.lineCap = .round
+            bracketLayer.allowsEdgeAntialiasing = true
         }
 
         func checkPermissionsAndSetup() {
@@ -103,10 +109,12 @@ struct QRScannerView: UIViewRepresentable {
                 let transformed = preview.videoPreviewLayer
                     .transformedMetadataObject(for: qrObject)
             else {
+                // Hide brackets if no QR
                 bracketLayer.path = nil
                 return
             }
 
+            // Build bracket path
             let rect = transformed.bounds
             let length = min(rect.width, rect.height) * 0.2
             let path = UIBezierPath()
@@ -131,11 +139,14 @@ struct QRScannerView: UIViewRepresentable {
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))
 
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.1)
             bracketLayer.frame = preview.bounds
             bracketLayer.path = path.cgPath
+            CATransaction.commit()
 
+            // Report the decoded string (does not stop session)
             parent.completion(string)
-            // Keep running so brackets keep tracking
         }
     }
 }
