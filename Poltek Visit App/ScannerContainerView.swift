@@ -15,6 +15,15 @@ struct ScannerContainerView: View {
 
     @State private var selectedTab: Tab = .qr
     @State private var scannedCode: String? = nil
+    @State private var discoveredClues: Set<Int> = []
+
+    private let qrClueURLs = [
+        "https://qrs.ly/bkgtv1h",
+        "https://qrs.ly/ntgtv2j",
+        "https://qrs.ly/5rgtv2r",
+        "https://qrs.ly/tvgtv30",
+        "https://qrs.ly/njgtv34"
+    ]
 
     var body: some View {
         NavigationStack {
@@ -28,32 +37,7 @@ struct ScannerContainerView: View {
                     nextButtonOverlay()
                 }
             }
-            .overlay(
-                GeometryReader { proxy in
-                    VStack(spacing: 0) {
-                        Color.clear
-                            .frame(height: proxy.safeAreaInsets.top)
-                        HStack {
-                            Button(action: onBack) {
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white)
-                                        .frame(width: 44, height: 44)
-                                        .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                                    Image(systemName: "chevron.left")
-                                        .font(.system(size: 20, weight: .medium))
-                                        .foregroundColor(.black)
-                                }
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal)
-                        .frame(height: 80)
-                        .offset(y: -30)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
-            )
+            .overlay(backButtonOverlay())
             .navigationBarHidden(true)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -65,30 +49,53 @@ struct ScannerContainerView: View {
     private func contentBody() -> some View {
         switch selectedTab {
         case .qr:
-            QRScannerView { code in
-                scannedCode = code
-            }
-            .ignoresSafeArea()
-            .overlay(
-                Group {
-                    if let code = scannedCode {
-                        VStack {
-                            Spacer()
-                            VStack(spacing: 6) {
-                                Text("Scanned QR Code:")
-                                    .font(.headline)
-                                Text(code)
-                                    .font(.body)
-                                    .multilineTextAlignment(.center)
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(8)
-                            .padding(.bottom, 60)
-                        }
+            ZStack {
+                QRScannerView { code in
+                    scannedCode = code
+                    if let idx = qrClueURLs.firstIndex(of: code) {
+                        discoveredClues.insert(idx + 1)
                     }
                 }
-            )
+
+                // bottom clue labels, same style as scan & listen
+                VStack {
+                    Spacer()
+                    HStack(spacing: 8) {
+                        ForEach(1...5, id: \.self) { idx in
+                            Text("Clue \(idx)")
+                                .font(.caption)
+                                .foregroundColor(
+                                    discoveredClues.contains(idx)
+                                        ? .white
+                                        : .gray
+                                )
+                                .padding(6)
+                                .background(Color.black.opacity(0.5))
+                                .cornerRadius(4)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+                }
+
+                // scanned-code result
+                if let code = scannedCode {
+                    VStack {
+                        Spacer()
+                        VStack(spacing: 6) {
+                            Text("Scanned QR Code:")
+                                .font(.headline)
+                            Text(code)
+                                .font(.body)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.8))
+                        .cornerRadius(12)
+                        .padding(.bottom, 60)
+                    }
+                }
+            }
 
         case .scan:
             CameraFeedView(
@@ -113,6 +120,32 @@ struct ScannerContainerView: View {
                 onDone: { onNext(.nfc) },
                 onBack: onBack
             )
+        }
+    }
+
+    private func backButtonOverlay() -> some View {
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                Color.clear.frame(height: proxy.safeAreaInsets.top)
+                HStack {
+                    Button(action: onBack) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 44, height: 44)
+                                .shadow(color: Color.black.opacity(0.2),
+                                        radius: 4, x: 0, y: 2)
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(.black)
+                        }
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .frame(height: 80)
+                .offset(y: -30)
+            }
         }
     }
 
@@ -185,6 +218,7 @@ struct ScannerContainerView: View {
 }
 
 
+
 struct ScannerContainerView_Previews: PreviewProvider {
     static var previews: some View {
         ScannerContainerView(
@@ -196,3 +230,4 @@ struct ScannerContainerView_Previews: PreviewProvider {
         )
     }
 }
+ 

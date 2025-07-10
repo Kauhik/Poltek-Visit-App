@@ -8,7 +8,6 @@
 import SwiftUI
 import AVFoundation
 
-// A UIView whose backing layer is AVCaptureVideoPreviewLayer
 class PreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
@@ -17,7 +16,6 @@ class PreviewView: UIView {
 }
 
 struct QRScannerView: UIViewRepresentable {
-    /// Called with the decoded QR string whenever a code is found
     var completion: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -25,22 +23,21 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> PreviewView {
-        let previewView = PreviewView()
-        previewView.backgroundColor = .black
-        context.coordinator.previewView = previewView
+        let preview = PreviewView()
+        preview.backgroundColor = .black
+        context.coordinator.previewView = preview
         context.coordinator.checkPermissionsAndSetup()
-        return previewView
+        return preview
     }
 
     func updateUIView(_ uiView: PreviewView, context: Context) {
-        // Ensure preview layer always fills the view
         context.coordinator.previewView?.videoPreviewLayer.frame = uiView.bounds
     }
 
     class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
         let parent: QRScannerView
-        var session: AVCaptureSession?
         weak var previewView: PreviewView?
+        var session: AVCaptureSession?
         let bracketLayer = CAShapeLayer()
 
         init(parent: QRScannerView) {
@@ -49,7 +46,6 @@ struct QRScannerView: UIViewRepresentable {
             bracketLayer.strokeColor = UIColor.yellow.cgColor
             bracketLayer.lineWidth = 4
             bracketLayer.fillColor = UIColor.clear.cgColor
-            // Rounded corners on the bracket joints
             bracketLayer.lineJoin = .round
             bracketLayer.lineCap = .round
             bracketLayer.allowsEdgeAntialiasing = true
@@ -109,32 +105,26 @@ struct QRScannerView: UIViewRepresentable {
                 let transformed = preview.videoPreviewLayer
                     .transformedMetadataObject(for: qrObject)
             else {
-                // Hide brackets if no QR
                 bracketLayer.path = nil
                 return
             }
 
-            // Build bracket path
             let rect = transformed.bounds
             let length = min(rect.width, rect.height) * 0.2
             let path = UIBezierPath()
 
-            // top-left
             path.move(to: CGPoint(x: rect.minX, y: rect.minY + length))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.minX + length, y: rect.minY))
 
-            // top-right
             path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
 
-            // bottom-right
             path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
 
-            // bottom-left
             path.move(to: CGPoint(x: rect.minX + length, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))
@@ -145,7 +135,6 @@ struct QRScannerView: UIViewRepresentable {
             bracketLayer.path = path.cgPath
             CATransaction.commit()
 
-            // Report the decoded string (does not stop session)
             parent.completion(string)
         }
     }
