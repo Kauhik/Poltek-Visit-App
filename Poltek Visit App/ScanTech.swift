@@ -17,7 +17,7 @@ enum ScanTech: CaseIterable, Identifiable {
         case .camera:     return "Camera"
         case .nfc:        return "NFC"
         case .microphone: return "Microphone"
-        case .ar:         return "AR Camera"
+        case .ar:         return "AR Camera"    
         }
     }
 
