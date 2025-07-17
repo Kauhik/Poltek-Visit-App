@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct DailyLifePuzzleView: View {
+    /// Called once all 5 pairs are matched
     var onComplete: () -> Void
+    /// Called when the Back button is tapped
     var onBack: () -> Void
 
     @StateObject private var data = DailyLifeData()
@@ -25,53 +27,87 @@ struct DailyLifePuzzleView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Daily Life Puzzle")
-                        .font(.title2).bold()
-                    Text("Tap the matching pairs")
-                        .font(.subheadline)
-                }
-                .padding(.horizontal)
+            ZStack {
+                // Background gradient
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 1.0, green: 0.95, blue: 0.8),
+                        Color.white
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                VStack(spacing: 12) {
-                    ForEach(0..<wordCards.count, id: \.self) { row in
-                        HStack(spacing: 12) {
-                            cardViewLeft(row)
-                            cardViewRight(row)
-                        }
+                VStack(spacing: 24) {
+                    // Title & subtitle, centered and prominent
+                    VStack(spacing: 8) {
+                        Text("Daily Life")
+                            .font(.largeTitle)
+                            .bold()
+                            .multilineTextAlignment(.center)
+                        Text("Tap the matching pairs")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                }
-                .padding(.horizontal)
+                    .padding(.top, 32)
+                    .padding(.horizontal)
 
-                Spacer()
+                    // Puzzle cards container
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(0..<wordCards.count, id: \.self) { row in
+                                HStack(spacing: 16) {
+                                    cardViewLeft(row)
+                                    cardViewRight(row)
+                                }
+                            }
+                        }
+                        .padding()
+                        // Make box taller so it doesn't look empty
+                        .frame(maxWidth: .infinity, minHeight: 300)
+                    }
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(20)
+                    .padding(.horizontal)
+
+                    Spacer()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
             }
             .onReceive(data.$pairs) { all in
+                // Filter and choose 5 items as before
                 let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
                 let origins = Set(filtered.map(\.origin))
                 let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
-
                 let chosen: [DailyLifePair]
                 if needMix && filtered.count >= 5 {
                     var tmp: [DailyLifePair]
                     repeat {
                         tmp = Array(filtered.shuffled().prefix(5))
                     } while !(
-                        tmp.contains(where:{ $0.origin=="Singapore" }) &&
-                        tmp.contains(where:{ $0.origin=="Indonesia" })
+                        tmp.contains(where: { $0.origin == "Singapore" }) &&
+                        tmp.contains(where: { $0.origin == "Indonesia" })
                     )
                     chosen = tmp
                 } else {
                     chosen = Array(filtered.shuffled().prefix(5))
                 }
 
-                wordCards    = chosen.map {
+                // Build cards
+                wordCards = chosen.map {
                     CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id)
                 }.shuffled()
                 meaningCards = chosen.map {
                     CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id)
                 }.shuffled()
 
+                // Reset state
                 selectedWord = nil
                 selectedMeaning = nil
                 wrongWords.removeAll()
@@ -81,14 +117,10 @@ struct DailyLifePuzzleView: View {
                 matchedWords.removeAll()
                 matchedMeanings.removeAll()
             }
-            .navigationTitle("Daily Life")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back", action: onBack)
-                }
-            }
         }
     }
+
+    // MARK: – Card Views & Logic
 
     private func cardViewLeft(_ row: Int) -> some View {
         CardView(text: wordCards[row].text, state: wordState(row))
@@ -112,9 +144,9 @@ struct DailyLifePuzzleView: View {
     }
 
     private func meaningState(_ row: Int) -> CardView.CardState {
-        if wrongMeanings.contains(row)   { return .wrong }
-        if correctMeanings.contains(row) { return .correct }
-        if selectedMeaning == row        { return .selected }
+        if wrongMeanings.contains(row)    { return .wrong }
+        if correctMeanings.contains(row)  { return .correct }
+        if selectedMeaning == row         { return .selected }
         return .normal
     }
 
@@ -127,11 +159,11 @@ struct DailyLifePuzzleView: View {
         guard selectedMeaning == nil, selectedWord != nil else { return }
         selectedMeaning = row
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            evaluate()
+            evaluatePair()
         }
     }
 
-    private func evaluate() {
+    private func evaluatePair() {
         guard let w = selectedWord, let m = selectedMeaning else { return }
         if wordCards[w].matchId == meaningCards[m].matchId {
             correctWords.insert(w); correctMeanings.insert(m)
@@ -182,5 +214,11 @@ fileprivate struct CardView: View {
         case .wrong:    return Color.red.opacity(0.5)
         case .correct:  return Color.green.opacity(0.5)
         }
+    }
+}
+
+struct DailyLifePuzzleView_Previews: PreviewProvider {
+    static var previews: some View {
+        DailyLifePuzzleView(onComplete: {}, onBack: {})
     }
 }

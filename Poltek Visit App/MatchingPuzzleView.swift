@@ -7,16 +7,10 @@
 
 import SwiftUI
 
-fileprivate struct CardItem: Identifiable {
-    let id: Int
-    let text: String
-    let matchId: Int
-}
-
 struct MatchingPuzzleView: View {
     /// Called once all 5 pairs are matched
     var onComplete: () -> Void
-    /// Called when the nav‐bar Back is tapped
+    /// Called when the Back button is tapped
     var onBack: () -> Void
 
     @StateObject private var data = PuzzleData()
@@ -33,53 +27,80 @@ struct MatchingPuzzleView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Cultural Expression")
-                        .font(.title2).bold()
-                    Text("Tap the matching pairs")
-                        .font(.subheadline)
-                }
-                .padding(.horizontal)
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 1.0, green: 0.95, blue: 0.8),
+                        Color.white
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                VStack(spacing: 12) {
-                    ForEach(0..<wordCards.count, id: \.self) { row in
-                        HStack(spacing: 12) {
-                            leftCard(row)
-                            rightCard(row)
-                        }
+                VStack(spacing: 24) {
+                    // Title & subtitle
+                    VStack(spacing: 8) {
+                        Text("Cultural Expression")
+                            .font(.largeTitle)
+                            .bold()
+                            .multilineTextAlignment(.center)
+                        Text("Tap the matching pairs")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                }
-                .padding(.horizontal)
+                    .padding(.top, 32)
+                    .padding(.horizontal)
 
-                Spacer()
+                    // Cards container
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(0..<wordCards.count, id: \.self) { row in
+                                HStack(spacing: 16) {
+                                    cardViewLeft(row)
+                                    cardViewRight(row)
+                                }
+                            }
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, minHeight: 300)
+                    }
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(20)
+                    .padding(.horizontal)
+
+                    Spacer()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back", action: onBack)
+                }
             }
             .onReceive(data.$pairs) { all in
                 let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
                 let origins = Set(filtered.map(\.origin))
                 let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
-
                 let chosen: [PuzzlePair]
                 if needMix && filtered.count >= 5 {
                     var tmp: [PuzzlePair]
                     repeat {
                         tmp = Array(filtered.shuffled().prefix(5))
                     } while !(
-                        tmp.contains(where:{ $0.origin=="Singapore" }) &&
-                        tmp.contains(where:{ $0.origin=="Indonesia" })
+                        tmp.contains(where: { $0.origin == "Singapore" }) &&
+                        tmp.contains(where: { $0.origin == "Indonesia" })
                     )
                     chosen = tmp
                 } else {
                     chosen = Array(filtered.shuffled().prefix(5))
                 }
-
-                wordCards = chosen
-                    .map { CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id) }
-                    .shuffled()
-                meaningCards = chosen
-                    .map { CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id) }
-                    .shuffled()
-
+                wordCards = chosen.map {
+                    CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id)
+                }.shuffled()
+                meaningCards = chosen.map {
+                    CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id)
+                }.shuffled()
                 selectedWord = nil
                 selectedMeaning = nil
                 wrongWords.removeAll()
@@ -89,23 +110,17 @@ struct MatchingPuzzleView: View {
                 matchedWords.removeAll()
                 matchedMeanings.removeAll()
             }
-            .navigationTitle("Words Puzzle")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back", action: onBack)
-                }
-            }
         }
     }
 
-    private func leftCard(_ row: Int) -> some View {
+    private func cardViewLeft(_ row: Int) -> some View {
         CardView(text: wordCards[row].text, state: wordState(row))
             .onTapGesture { tapWord(row) }
             .disabled(matchedWords.contains(row))
             .opacity(matchedWords.contains(row) ? 0.3 : 1)
     }
 
-    private func rightCard(_ row: Int) -> some View {
+    private func cardViewRight(_ row: Int) -> some View {
         CardView(text: meaningCards[row].text, state: meaningState(row))
             .onTapGesture { tapMeaning(row) }
             .disabled(matchedMeanings.contains(row))
@@ -120,9 +135,9 @@ struct MatchingPuzzleView: View {
     }
 
     private func meaningState(_ row: Int) -> CardView.CardState {
-        if wrongMeanings.contains(row)   { return .wrong }
-        if correctMeanings.contains(row) { return .correct }
-        if selectedMeaning == row        { return .selected }
+        if wrongMeanings.contains(row)    { return .wrong }
+        if correctMeanings.contains(row)  { return .correct }
+        if selectedMeaning == row         { return .selected }
         return .normal
     }
 
@@ -142,30 +157,29 @@ struct MatchingPuzzleView: View {
     private func evaluatePair() {
         guard let w = selectedWord, let m = selectedMeaning else { return }
         if wordCards[w].matchId == meaningCards[m].matchId {
-            correctWords.insert(w)
-            correctMeanings.insert(m)
+            correctWords.insert(w); correctMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                matchedWords.insert(w)
-                matchedMeanings.insert(m)
-                correctWords.remove(w)
-                correctMeanings.remove(m)
-                selectedWord = nil
-                selectedMeaning = nil
+                matchedWords.insert(w); matchedMeanings.insert(m)
+                correctWords.remove(w); correctMeanings.remove(m)
+                selectedWord = nil; selectedMeaning = nil
                 if matchedWords.count == wordCards.count {
                     onComplete()
                 }
             }
         } else {
-            wrongWords.insert(w)
-            wrongMeanings.insert(m)
+            wrongWords.insert(w); wrongMeanings.insert(m)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                wrongWords.remove(w)
-                wrongMeanings.remove(m)
-                selectedWord = nil
-                selectedMeaning = nil
+                wrongWords.remove(w); wrongMeanings.remove(m)
+                selectedWord = nil; selectedMeaning = nil
             }
         }
     }
+}
+
+fileprivate struct CardItem: Identifiable {
+    let id: Int
+    let text: String
+    let matchId: Int
 }
 
 fileprivate struct CardView: View {
