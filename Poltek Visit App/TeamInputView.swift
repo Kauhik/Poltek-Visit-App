@@ -36,11 +36,11 @@ struct TeamInputView: View {
     @FocusState private var isTextFieldFocused: Bool
     @StateObject private var keyboard = KeyboardObserver()
 
-    private var isComplete: Bool { teamNumber.count >= 2 }
+    /// Only valid when exactly 2 digits are entered
+    private var isComplete: Bool { teamNumber.count == 2 }
 
     var body: some View {
         ZStack {
-            // Background: tap outside to dismiss keyboard
             Image("Background")
                 .resizable()
                 .scaledToFill()
@@ -53,17 +53,14 @@ struct TeamInputView: View {
                 VStack {
                     Spacer(minLength: geo.size.height * 0.1)
 
-                    // Logo
                     Image("Logo")
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: geo.size.width * 0.6)
                         .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
 
-                    // smaller fixed gap
                     Spacer().frame(height: 20)
 
-                    // Input card
                     VStack(spacing: 24) {
                         Text("Enter your group number")
                             .font(.headline)
@@ -91,14 +88,12 @@ struct TeamInputView: View {
                     .cornerRadius(20)
                     .padding(.horizontal, 24)
                     .onTapGesture {
-                        // tapping the card focuses the hidden textfield
                         isTextFieldFocused = true
                     }
 
-                    Spacer() // lets the bottom padding push it up
+                    Spacer()
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
-                // shift everything up by keyboard height
                 .padding(.bottom, keyboard.height)
                 .animation(.easeOut(duration: 0.25), value: keyboard.height)
             }
@@ -107,11 +102,19 @@ struct TeamInputView: View {
             TextField("", text: $teamNumber)
                 .keyboardType(.numberPad)
                 .focused($isTextFieldFocused)
+                .onChange(of: teamNumber) { newValue in
+                    // Keep only digits, max length 2
+                    let filtered = newValue.filter { $0.isNumber }
+                    if filtered.count > 2 {
+                        teamNumber = String(filtered.prefix(2))
+                    } else {
+                        teamNumber = filtered
+                    }
+                }
                 .frame(width: 0, height: 0)
                 .opacity(0)
         }
         .onAppear {
-            // show keyboard after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 isTextFieldFocused = true
             }
