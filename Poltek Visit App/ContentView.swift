@@ -8,19 +8,20 @@
 import SwiftUI
 
 enum Page {
-    case teamEntry, clueGrid, scanner
-    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
+    case teamEntry, clueGrid
+    case scanner, puzzleSelect
+    case puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
     case codeReveal
 }
 
 struct ContentView: View {
     @State private var currentPage: Page = .teamEntry
     @State private var teamNumber: String = ""
-    @State private var usageLeft: [ScanTech:Int] = Dictionary(
+    @State private var usageLeft: [ScanTech: Int] = Dictionary(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
     @State private var unlockedLetters: [String] = []
-    private let allLetters = ["A","B","C","D","E"]
+    private let allLetters = ["A", "B", "C", "D", "E"]
 
     var body: some View {
         switch currentPage {
@@ -61,52 +62,79 @@ struct ContentView: View {
                 },
                 onBack: { currentPage = .scanner }
             )
-          //  .padding()
 
         case .puzzleWords:
             MatchingPuzzleView(
-                onComplete: { currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onComplete: {
+                    unlockNextLetter()
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .puzzleSelect }
             )
-          //  .padding()
 
         case .puzzleHolidays:
             HolidayPuzzleView(
-                onComplete: { currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onComplete: {
+                    unlockNextLetter()
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .puzzleSelect }
             )
             .padding()
 
         case .puzzleDailyLife:
             DailyLifePuzzleView(
-                onComplete: { currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onComplete: {
+                    unlockNextLetter()
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .puzzleSelect }
             )
-        //    .padding()
 
         case .puzzleDailyFood:
             DailyFoodPuzzleView(
-                onComplete: { currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onComplete: {
+                    unlockNextLetter()
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .puzzleSelect }
             )
-       //     .padding()
 
         case .puzzlePlaces:
             PlacesPuzzleView(
-                onComplete: { currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onComplete: {
+                    unlockNextLetter()
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .puzzleSelect }
             )
-        //    .padding()
 
         case .codeReveal:
-            CodeView {
-                if unlockedLetters.count < allLetters.count {
-                    unlockedLetters.append(allLetters[unlockedLetters.count])
+            // safely unwrap the last unlocked letter
+            if let last = unlockedLetters.last {
+                CodeView(
+                    code: "\(unlockedLetters.count)",
+                    codeLabel: "Code \(last)"
+                ) {
+                    currentPage = .clueGrid
                 }
-                currentPage = .clueGrid
+            } else {
+                // fall back if somehow empty
+                CodeView(
+                    code: "0",
+                    codeLabel: "Code"
+                ) {
+                    currentPage = .clueGrid
+                }
             }
-        //    .padding()
         }
+    }
+
+    /// Add the next letter to `unlockedLetters`, if any remain.
+    private func unlockNextLetter() {
+        guard unlockedLetters.count < allLetters.count else { return }
+        let next = allLetters[unlockedLetters.count]
+        unlockedLetters.append(next)
     }
 }
 
