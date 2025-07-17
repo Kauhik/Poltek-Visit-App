@@ -23,7 +23,13 @@ struct ContentView: View {
     private let allLetters = ["A","B","C","D","E"]
 
     var body: some View {
-        if currentPage == .scanner {
+        switch currentPage {
+        case .teamEntry:
+            TeamInputView(teamNumber: $teamNumber) {
+                currentPage = .clueGrid
+            }
+
+        case .scanner:
             ScannerContainerView(
                 usageLeft: usageLeft,
                 onBack: { currentPage = .clueGrid },
@@ -34,78 +40,71 @@ struct ContentView: View {
             )
             .ignoresSafeArea()
 
-        } else {
-            VStack {
-                switch currentPage {
-                case .teamEntry:
-                    TeamInputView(teamNumber: $teamNumber) {
-                        currentPage = .clueGrid
+        case .clueGrid:
+            ClueListView(
+                teamNumber: teamNumber,
+                unlockedLetters: Set(unlockedLetters),
+                onScan: { currentPage = .scanner },
+                onSelect: { _ in currentPage = .puzzleSelect }
+            )
+            .padding()
+
+        case .puzzleSelect:
+            PuzzleTypeView(
+                onSelect: { choice in
+                    switch choice {
+                    case .words:      currentPage = .puzzleWords
+                    case .holidays:   currentPage = .puzzleHolidays
+                    case .dailyLife:  currentPage = .puzzleDailyLife
+                    case .dailyFood:  currentPage = .puzzleDailyFood
+                    case .places:     currentPage = .puzzlePlaces
                     }
+                },
+                onBack: { currentPage = .scanner }
+            )
+            .padding()
 
-                case .clueGrid:
-                    ClueListView(
-                        teamNumber: teamNumber,
-                        unlockedLetters: Set(unlockedLetters),
-                        onScan: { currentPage = .scanner },
-                        onSelect: { _ in currentPage = .puzzleSelect }
-                    )
+        case .puzzleWords:
+            MatchingPuzzleView(
+                onComplete: { currentPage = .codeReveal },
+                onBack:     { currentPage = .puzzleSelect }
+            )
+            .padding()
 
-                case .puzzleSelect:
-                    PuzzleTypeView(
-                        onSelect: { choice in
-                            switch choice {
-                            case .words:      currentPage = .puzzleWords
-                            case .holidays:   currentPage = .puzzleHolidays
-                            case .dailyLife:  currentPage = .puzzleDailyLife
-                            case .dailyFood:  currentPage = .puzzleDailyFood
-                            case .places:     currentPage = .puzzlePlaces
-                            }
-                        },
-                        onBack: { currentPage = .scanner }
-                    )
+        case .puzzleHolidays:
+            HolidayPuzzleView(
+                onComplete: { currentPage = .codeReveal },
+                onBack:     { currentPage = .puzzleSelect }
+            )
+            .padding()
 
-                case .puzzleWords:
-                    MatchingPuzzleView(
-                        onComplete: { currentPage = .codeReveal },
-                        onBack:     { currentPage = .puzzleSelect }
-                    )
+        case .puzzleDailyLife:
+            DailyLifePuzzleView(
+                onComplete: { currentPage = .codeReveal },
+                onBack:     { currentPage = .puzzleSelect }
+            )
+            .padding()
 
-                case .puzzleHolidays:
-                    HolidayPuzzleView(
-                        onComplete: { currentPage = .codeReveal },
-                        onBack:     { currentPage = .puzzleSelect }
-                    )
+        case .puzzleDailyFood:
+            DailyFoodPuzzleView(
+                onComplete: { currentPage = .codeReveal },
+                onBack:     { currentPage = .puzzleSelect }
+            )
+            .padding()
 
-                case .puzzleDailyLife:
-                    DailyLifePuzzleView(
-                        onComplete: { currentPage = .codeReveal },
-                        onBack:     { currentPage = .puzzleSelect }
-                    )
+        case .puzzlePlaces:
+            PlacesPuzzleView(
+                onComplete: { currentPage = .codeReveal },
+                onBack:     { currentPage = .puzzleSelect }
+            )
+            .padding()
 
-                case .puzzleDailyFood:
-                    DailyFoodPuzzleView(
-                        onComplete: { currentPage = .codeReveal },
-                        onBack:     { currentPage = .puzzleSelect }
-                    )
-
-                case .puzzlePlaces:
-                    PlacesPuzzleView(
-                        onComplete: { currentPage = .codeReveal },
-                        onBack:     { currentPage = .puzzleSelect }
-                    )
-
-                case .codeReveal:
-                    CodeView {
-                        if unlockedLetters.count < allLetters.count {
-                            unlockedLetters.append(allLetters[unlockedLetters.count])
-                        }
-                        currentPage = .clueGrid
-                    }
-
-                // scanner handled above
-                case .scanner:
-                    EmptyView()
+        case .codeReveal:
+            CodeView {
+                if unlockedLetters.count < allLetters.count {
+                    unlockedLetters.append(allLetters[unlockedLetters.count])
                 }
+                currentPage = .clueGrid
             }
             .padding()
         }
