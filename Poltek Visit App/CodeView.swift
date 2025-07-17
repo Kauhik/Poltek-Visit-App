@@ -5,6 +5,7 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
+// CodeView.swift
 import SwiftUI
 
 struct CodeView: View {
@@ -45,7 +46,6 @@ struct CodeView: View {
 
             VStack(spacing: 24) {
                 ZStack {
-                    // Enlarged code box
                     RoundedRectangle(cornerRadius: 20)
                         .fill(
                             LinearGradient(
@@ -56,64 +56,56 @@ struct CodeView: View {
                         )
                         .frame(width: 300, height: 300)
                         .shadow(radius: 10)
-                        .zIndex(1)
 
                     VStack(spacing: 8) {
                         Text(code)
                             .font(.system(size: 120, weight: .bold))
                             .foregroundColor(.white)
-
                         Text(codeLabel)
                             .font(.title)
                             .foregroundColor(.white)
                     }
-                    .zIndex(2)
                 }
 
                 Text("Fantastic Work!")
                     .font(.title)
-                    .fontWeight(.bold)
+                    .bold()
 
                 Text("You got a code!")
                     .font(.subheadline)
                     .foregroundColor(.gray)
 
-                Button(action: onDone) {
-                    Text("Done")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.teal)
-                        .cornerRadius(30)
-                }
-                .padding(.horizontal, 40)
+                Button("Done", action: onDone)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.teal)
+                    .foregroundColor(.white)
+                    .cornerRadius(30)
+                    .padding(.horizontal, 40)
             }
         }
         .onAppear {
             // Hide emojis after 6 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
-                withAnimation {
-                    showEmojis = false
-                }
+                withAnimation { showEmojis = false }
             }
         }
     }
 }
 
-// MARK: - Exploding Emoji
 
+/// A single “particle” of emoji that explodes outward.
 struct ExplodingEmojiView: View {
     let emoji: String
     let delay: Double
 
-    @State private var xNorm: CGFloat = 0.5
-    @State private var yNorm: CGFloat = 0.45
-    @State private var rotation: Double = 0
+    @State private var x: CGFloat = 0.5
+    @State private var y: CGFloat = 0.45
+    @State private var rot: Double = 0.0
     @State private var scale: CGFloat = 0.8
     @State private var opacity: Double = 1.0
 
-    // Random direction and distance
     private let angle = Double.random(in: 0..<360) * .pi / 180
     private let radiusNorm = CGFloat.random(in: 0.3...0.7)
 
@@ -123,32 +115,26 @@ struct ExplodingEmojiView: View {
                 .font(.system(size: 45))
                 .opacity(opacity)
                 .position(
-                    x: geo.size.width * xNorm,
-                    y: geo.size.height * yNorm
+                    x: geo.size.width * x,
+                    y: geo.size.height * y
                 )
-                .rotationEffect(.degrees(rotation))
+                .rotationEffect(.degrees(rot))
                 .scaleEffect(scale)
                 .onAppear {
+                    // compute target normalized offsets
                     let targetX = 0.5 + cos(angle) * radiusNorm
                     let targetY = 0.45 + sin(angle) * radiusNorm
+
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        withAnimation(
-                            Animation.easeOut(duration: 3)
-                        ) {
-                            xNorm = targetX
-                            yNorm = targetY
-                            rotation = 720
+                        withAnimation(.easeOut(duration: 3)) {
+                            x = targetX
+                            y = targetY
+                            rot = 720
                             scale = 1.5
                             opacity = 0.0
                         }
                     }
                 }
         }
-    }
-}
-
-struct CodeView_Previews: PreviewProvider {
-    static var previews: some View {
-        CodeView(code: "CDAB", codeLabel: "All Codes") { }
     }
 }

@@ -41,6 +41,7 @@
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
+				team_codes.csv,
 			);
 			target = 80EAFAE62E0E413E008CDB45 /* Poltek Visit AppTests */;
 		};
@@ -55,6 +56,7 @@
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
+				team_codes.csv,
 			);
 			target = 80EAFAF02E0E413E008CDB45 /* Poltek Visit AppUITests */;
 		};
