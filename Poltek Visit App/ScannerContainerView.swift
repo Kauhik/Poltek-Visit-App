@@ -18,12 +18,10 @@ struct ScannerContainerView: View {
     @State private var discoveredClues: Set<Int> = []
     @State private var didScheduleCompletion = false
 
-    // TagScanner instead of NFCScanner
     @StateObject private var tagScanner = TagScanner()
     @State private var discoveredTagClues: Set<Int> = []
     @State private var lastTagData: String = ""
 
-    // QR clues
     private let qrClueURLs = [
         "https://qrs.ly/bkgtv1h",
         "https://qrs.ly/ntgtv2j",
@@ -81,8 +79,8 @@ struct ScannerContainerView: View {
                                 onNext:       { onNext(.microphone) })
 
         case .move:
-            ARCameraView(onDone: { onNext(.ar) },
-                         onBack: onBack)
+            MoveClassifierView(onDone: { onNext(.ar) },
+                               onBack: onBack)
 
         case .nfc:
             ZStack {
@@ -237,16 +235,5 @@ struct ScannerContainerView: View {
             case .nfc:    return "wave.3.right"
             }
         }
-    }
-}
-
-struct ScannerContainerView_Previews: PreviewProvider {
-    static var previews: some View {
-        ScannerContainerView(
-            usageLeft: Dictionary(uniqueKeysWithValues:
-                ScanTech.allCases.map { ($0, $0.maxUses) }
-            ),
-            onBack: {}, onNext: { _ in }
-        )
     }
 }

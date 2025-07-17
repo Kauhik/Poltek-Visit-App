@@ -38,6 +38,7 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
 			);
@@ -51,6 +52,7 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
 			);
