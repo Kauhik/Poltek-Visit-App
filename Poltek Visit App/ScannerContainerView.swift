@@ -34,15 +34,15 @@ struct ScannerContainerView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
+
+                // contentBody now fills safe area for .qr, .scan, .move, etc.
                 contentBody()
-                    .ignoresSafeArea(edges: selectedTab == .scan ? .all : [])
-                if selectedTab == .scan {
-                    nextButtonOverlay()
-                }
+                    .ignoresSafeArea(edges: selectedTab == .qr || selectedTab == .scan ? .all : [])
+
+                overlayBackButton()
             }
-            .overlay(backButtonOverlay())
             .navigationBarHidden(true)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
             bottomTabBar
         }
     }
@@ -51,12 +51,14 @@ struct ScannerContainerView: View {
     private func contentBody() -> some View {
         switch selectedTab {
         case .qr:
+            // full‑screen QR preview
             ZStack {
                 QRScannerView { code in
                     if let idx = qrClueURLs.firstIndex(of: code) {
                         discoveredClues.insert(idx + 1)
                     }
                 }
+
                 VStack {
                     Spacer()
                     clueLabels(count: qrClueURLs.count, lit: discoveredClues)
@@ -136,22 +138,7 @@ struct ScannerContainerView: View {
         }
     }
 
-    private func clueLabels(count: Int, lit: Set<Int>) -> some View {
-        HStack(spacing: 12) {
-            ForEach(1...count, id: \.self) { idx in
-                Text("Clue \(idx)")
-                    .font(.caption)
-                    .foregroundColor(lit.contains(idx) ? .white : .gray)
-                    .padding(6)
-                    .background(Color.black.opacity(0.5))
-                    .cornerRadius(4)
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-    }
-
-    private func backButtonOverlay() -> some View {
+    private func overlayBackButton() -> some View {
         GeometryReader { geo in
             VStack(spacing: 0) {
                 Color.clear.frame(height: geo.safeAreaInsets.top)
@@ -185,7 +172,8 @@ struct ScannerContainerView: View {
                     VStack(spacing: 4) {
                         Image(systemName: tab.iconName)
                             .font(.system(size: 20))
-                        Text(tab.label).font(.caption2)
+                        Text(tab.label)
+                            .font(.caption2)
                     }
                 }
                 .foregroundColor(selectedTab == tab ? .teal : .gray)
@@ -195,23 +183,19 @@ struct ScannerContainerView: View {
         .frame(height: 80)
     }
 
-    private func nextButtonOverlay() -> some View {
-        GeometryReader { geo in
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button("Next") {
-                        onNext(.camera)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
-                    .disabled((usageLeft[.camera] ?? 0) <= 0)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, geo.safeAreaInsets.bottom + 60)
+    private func clueLabels(count: Int, lit: Set<Int>) -> some View {
+        HStack(spacing: 12) {
+            ForEach(1...count, id: \.self) { idx in
+                Text("Clue \(idx)")
+                    .font(.caption)
+                    .foregroundColor(lit.contains(idx) ? .white : .gray)
+                    .padding(6)
+                    .background(Color.black.opacity(0.5))
+                    .cornerRadius(4)
             }
         }
+        .padding(.horizontal)
+        .padding(.bottom, 8)
     }
 
     private enum Tab: String, CaseIterable, Identifiable {
