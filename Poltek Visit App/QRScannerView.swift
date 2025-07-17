@@ -8,10 +8,11 @@
 import SwiftUI
 import AVFoundation
 
+/// A UIView whose layer is an AVCaptureVideoPreviewLayer.
 class PreviewView: UIView {
     override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
     var videoPreviewLayer: AVCaptureVideoPreviewLayer {
-        return layer as! AVCaptureVideoPreviewLayer
+        layer as! AVCaptureVideoPreviewLayer
     }
 }
 
@@ -32,7 +33,8 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PreviewView, context: Context) {
-        context.coordinator.previewView?.videoPreviewLayer.frame = uiView.bounds
+        // Ensure the preview layer always fills its view
+        uiView.videoPreviewLayer.frame = uiView.bounds
     }
 
     class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
@@ -65,14 +67,15 @@ struct QRScannerView: UIViewRepresentable {
             }
         }
 
-        func setupSession() {
+        private func setupSession() {
             let session = AVCaptureSession()
             guard
-                let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+                let device = AVCaptureDevice.default(.builtInWideAngleCamera,
+                                                     for: .video,
+                                                     position: .back),
                 let input = try? AVCaptureDeviceInput(device: device),
                 session.canAddInput(input)
             else { return }
-
             session.addInput(input)
 
             let output = AVCaptureMetadataOutput()
@@ -81,13 +84,20 @@ struct QRScannerView: UIViewRepresentable {
             output.setMetadataObjectsDelegate(self, queue: .main)
             output.metadataObjectTypes = [.qr]
 
+            // Install preview & bracket on UI
             DispatchQueue.main.async {
                 guard let preview = self.previewView else { return }
                 preview.videoPreviewLayer.session = session
                 preview.videoPreviewLayer.videoGravity = .resizeAspectFill
                 preview.layer.addSublayer(self.bracketLayer)
+            }
+
+            // Start running on a background thread
+            DispatchQueue.global(qos: .userInitiated).async {
                 session.startRunning()
-                self.session = session
+                DispatchQueue.main.async {
+                    self.session = session
+                }
             }
         }
 
@@ -110,6 +120,7 @@ struct QRScannerView: UIViewRepresentable {
                 return
             }
 
+            // Draw the yellow brackets
             let rect = transformed.bounds
             let length = min(rect.width, rect.height) * 0.2
             let path = UIBezierPath()

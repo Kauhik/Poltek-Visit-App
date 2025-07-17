@@ -18,12 +18,16 @@ class ActionClassifierViewModel: NSObject,
     @Published var confidenceLabel: String = "Observing..."
     @Published var actionFrameCounts: [String: Int] = [:]
 
+    /// New: mirror preview when front camera
+    @Published var isUsingFrontCamera: Bool
+
     private let videoCapture = VideoCapture()
     private var videoProcessingChain = VideoProcessingChain()
-
+    
     override init() {
+        // Initialize mirror flag
+        isUsingFrontCamera = (videoCapture.currentPosition == .front)
         super.init()
-        // hook up delegates
         videoCapture.delegate = self
         videoProcessingChain.delegate = self
     }
@@ -34,7 +38,7 @@ class ActionClassifierViewModel: NSObject,
         videoCapture.isEnabled = true
     }
 
-    /// Stop capture (e.g. when showing a summary)
+    /// Stop capture
     func stop() {
         videoCapture.isEnabled = false
     }
@@ -42,10 +46,12 @@ class ActionClassifierViewModel: NSObject,
     /// Flip between front/back camera
     func toggleCamera() {
         videoCapture.toggleCameraSelection()
+        // Update mirroring flag
+        isUsingFrontCamera = (videoCapture.currentPosition == .front)
     }
 
-    // MARK: - VideoCaptureDelegate
-
+    // ... rest of your delegates & drawing code unchanged ...
+    
     func videoCapture(_ videoCapture: VideoCapture,
                       didCreate framePublisher: FramePublisher) {
         // reset labels
@@ -55,12 +61,9 @@ class ActionClassifierViewModel: NSObject,
         videoProcessingChain.upstreamFramePublisher = framePublisher
     }
 
-    // MARK: - VideoProcessingChainDelegate
-
     func videoProcessingChain(_ chain: VideoProcessingChain,
                               didDetect poses: [Pose]?,
                               in frame: CGImage) {
-        // draw wireframe on the camera frame
         let img = drawPoses(poses, onto: frame)
         previewImage = img
     }
@@ -68,29 +71,22 @@ class ActionClassifierViewModel: NSObject,
     func videoProcessingChain(_ chain: VideoProcessingChain,
                               didPredict actionPrediction: ActionPrediction,
                               for frames: Int) {
-        // accumulate for summary
         if actionPrediction.isModelLabel {
             let total = (actionFrameCounts[actionPrediction.label] ?? 0) + frames
             actionFrameCounts[actionPrediction.label] = total
         }
-        // update labels
         actionLabel = actionPrediction.label
         confidenceLabel = actionPrediction.confidenceString ?? "Observing..."
     }
-
-    // MARK: - Drawing
 
     private func drawPoses(_ poses: [Pose]?, onto frame: CGImage) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1.0
         let size = CGSize(width: frame.width, height: frame.height)
         let renderer = UIGraphicsImageRenderer(size: size, format: format)
-
         return renderer.image { ctx in
             let cg = ctx.cgContext
-            // draw the raw camera
             cg.draw(frame, in: CGRect(origin: .zero, size: size))
-            // overlay wireframe
             let transform = CGAffineTransform(scaleX: size.width,
                                               y: size.height)
             poses?.forEach { $0.drawWireframeToContext(cg,

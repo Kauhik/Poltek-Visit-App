@@ -23,6 +23,7 @@ class VideoCapture: NSObject {
         didSet { createVideoFramePublisher() }
     }
 
+    /// Enable or disable capture session
     var isEnabled = true {
         didSet {
             if isEnabled { enableCaptureSession() }
@@ -30,10 +31,12 @@ class VideoCapture: NSObject {
         }
     }
 
+    /// Front or back camera
     private var cameraPosition = AVCaptureDevice.Position.front {
         didSet { createVideoFramePublisher() }
     }
 
+    /// Update orientation from UIDevice
     private var orientation = AVCaptureVideoOrientation.portrait {
         didSet { createVideoFramePublisher() }
     }
@@ -41,14 +44,20 @@ class VideoCapture: NSObject {
     private let captureSession = AVCaptureSession()
     private var framePublisher: PassthroughSubject<Frame, Never>?
     private let videoCaptureQueue = DispatchQueue(
-        label: "VideoCapture.Queue", qos: .userInitiated
+        label: "VideoCapture.Queue",
+        qos: .userInitiated
     )
 
     // MARK: – Public API
 
-    /// Flip front/back
+    /// Flip between front and back
     func toggleCameraSelection() {
         cameraPosition = (cameraPosition == .back) ? .front : .back
+    }
+
+    /// Expose current camera position
+    var currentPosition: AVCaptureDevice.Position {
+        cameraPosition
     }
 
     /// Update orientation from UIDevice
@@ -86,12 +95,14 @@ class VideoCapture: NSObject {
     }
 }
 
-// MARK: – AVCapture Output Delegate
+// MARK: – AVCaptureVideoDataOutputSampleBufferDelegate
 
 extension VideoCapture: AVCaptureVideoDataOutputSampleBufferDelegate {
-    func captureOutput(_ output: AVCaptureOutput,
-                       didOutput frame: Frame,
-                       from connection: AVCaptureConnection) {
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput frame: Frame,
+        from connection: AVCaptureConnection
+    ) {
         framePublisher?.send(frame)
     }
 }
@@ -137,15 +148,16 @@ extension VideoCapture {
     ) -> Bool {
         guard let inp = input, let out = output else { return false }
 
+        // Remove old inputs/outputs
         captureSession.inputs.forEach  { captureSession.removeInput($0) }
         captureSession.outputs.forEach { captureSession.removeOutput($0) }
 
+        // Add new
         guard captureSession.canAddInput(inp),
               captureSession.canAddOutput(out) else {
             print("Capture session not compatible")
             return false
         }
-
         captureSession.addInput(inp)
         captureSession.addOutput(out)
 
@@ -154,10 +166,12 @@ extension VideoCapture {
             return false
         }
 
+        // Always feed Vision upright frames
         if connection.isVideoOrientationSupported {
             connection.videoOrientation = orientation
         }
-        connection.isVideoMirrored = false  // no flip
+        // No mirroring here—preview mirroring is done in SwiftUI
+        connection.isVideoMirrored = false
 
         out.alwaysDiscardsLateVideoFrames = true
         return true
