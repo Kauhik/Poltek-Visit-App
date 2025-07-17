@@ -5,68 +5,76 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
+
 import SwiftUI
 
 struct ClueListView: View {
     let teamNumber: String
     let unlockedLetters: Set<String>
+    let combinationUnlocked: Bool
     var onScan: () -> Void
-    var onSelect: (String) -> Void
 
-    // A–D in a 2×2 grid, then E full‑width
     private let allLetters = ["A", "B", "C", "D"]
     private let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
     ]
+    private let codeNumbers = ["A": "1", "B": "5", "C": "6", "D": "8"]
 
-    
     var body: some View {
         ZStack {
-            // full‑screen background image
             Image("Background")
                 .resizable()
                 .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
-                    
-                    Spacer()
-                                            .frame(height: 80)
-                    // header
-                    Text("Work together to unlock all codes and open the locker")
+                    Spacer().frame(height: 80)
+
+                    Text("Work together to unlock all codes")
                         .font(.headline)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
 
-                    // 2×2 grid of A–D
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(allLetters, id: \.self) { letter in
-                            CodeTile(letter: letter,
-                                     unlocked: unlockedLetters.contains(letter))
-                                .onTapGesture {
-                                    if unlockedLetters.contains(letter) {
-                                        onSelect(letter)
-                                    }
-                                }
+                            CodeTile(
+                                letter: letter,
+                                unlocked: unlockedLetters.contains(letter),
+                                codeNumber: codeNumbers[letter]!
+                            )
                         }
                     }
                     .padding(.horizontal, 24)
 
-                    // full‑width tile E
-                    CodeTile(letter: "E",
-                             unlocked: unlockedLetters.contains("E"))
+                    // Combination bar
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(
+                            (combinationUnlocked && unlockedLetters.count == 4)
+                                ? AnyShapeStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.orange, Color.pink]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                  )
+                                : AnyShapeStyle(Color.gray.opacity(0.3))
+                        )
                         .frame(height: 100)
-                        .padding(.horizontal, 24)
-                        .onTapGesture {
-                            if unlockedLetters.contains("E") {
-                                onSelect("E")
+                        .overlay(
+                            // only show text when fully unlocked
+                            Group {
+                                if combinationUnlocked && unlockedLetters.count == 4 {
+                                    Text("CDAB")
+                                        .font(.title)
+                                        .bold()
+                                        .foregroundColor(.white)
+                                }
                             }
-                        }
+                        )
+                        .padding(.horizontal, 24)
 
-                    // locker number badge
                     VStack(spacing: 8) {
                         Text("Your locker number")
                             .font(.subheadline)
@@ -82,7 +90,6 @@ struct ClueListView: View {
                     .cornerRadius(20)
                     .padding(.horizontal, 24)
 
-                    // scan clue button
                     Button(action: onScan) {
                         Text("Scan Clue")
                             .font(.headline)
@@ -98,7 +105,6 @@ struct ClueListView: View {
                 .background(.ultraThinMaterial)
                 .cornerRadius(20)
             }
-            // hide the white ScrollView background
             .scrollContentBackground(.hidden)
         }
     }
@@ -107,19 +113,37 @@ struct ClueListView: View {
 private struct CodeTile: View {
     let letter: String
     let unlocked: Bool
+    let codeNumber: String
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gray.opacity(0.3))
+                .fill(
+                    unlocked
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.orange, Color.pink]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                          )
+                        : AnyShapeStyle(Color.gray.opacity(0.3))
+                )
 
             VStack(spacing: 8) {
-                Image(systemName: unlocked ? "lock.open" : "lock")
-                    .font(.title)
-                    .foregroundColor(.gray)
+                if unlocked {
+                    Text(codeNumber)
+                        .font(.largeTitle)
+                        .bold()
+                        .foregroundColor(.white)
+                } else {
+                    Image(systemName: "lock")
+                        .font(.title)
+                        .foregroundColor(.gray)
+                }
                 Text("Code \(letter)")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(unlocked ? .white : .gray)
             }
         }
         .frame(height: 100)
@@ -129,11 +153,23 @@ private struct CodeTile: View {
 
 struct ClueListView_Previews: PreviewProvider {
     static var previews: some View {
-        ClueListView(
-            teamNumber: "30",
-            unlockedLetters: ["A", "C"],
-            onScan: {},
-            onSelect: { _ in }
-        )
+        VStack(spacing: 40) {
+            // still locked
+            ClueListView(
+                teamNumber: "30",
+                unlockedLetters: ["A","B","C","D"],
+                combinationUnlocked: false
+            ) {}
+
+            // now unlocked!
+            ClueListView(
+                teamNumber: "30",
+                unlockedLetters: ["A","B","C","D"],
+                combinationUnlocked: true
+            ) {}
+        }
+        .padding()
+        .background(Color.black)
+        .previewLayout(.sizeThatFits)
     }
 }

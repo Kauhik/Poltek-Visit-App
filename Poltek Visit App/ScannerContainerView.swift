@@ -12,15 +12,16 @@ import CoreNFC
 struct ScannerContainerView: View {
     let usageLeft: [ScanTech: Int]
     var onBack: () -> Void
+    /// Called exactly once with the ScanTech the user just completed.
     var onNext: (ScanTech) -> Void
 
     @State private var selectedTab: Tab = .qr
     @State private var discoveredClues: Set<Int> = []
-    @State private var didScheduleCompletion = false
-
-    @StateObject private var tagScanner = TagScanner()
     @State private var discoveredTagClues: Set<Int> = []
     @State private var lastTagData: String = ""
+    @State private var didFinishCurrent = false
+
+    @StateObject private var tagScanner = TagScanner()
 
     private let qrClueURLs = [
         "https://qrs.ly/bkgtv1h",
@@ -34,55 +35,52 @@ struct ScannerContainerView: View {
         NavigationStack {
             ZStack {
                 Color.black.ignoresSafeArea()
-
-                // contentBody now fills safe area for .qr, .scan, .move, etc.
-                contentBody()
-                    .ignoresSafeArea(edges: selectedTab == .qr || selectedTab == .scan ? .all : [])
-
+                contentBody().ignoresSafeArea(edges: .all)
                 overlayBackButton()
             }
             .navigationBarHidden(true)
-
             bottomTabBar
         }
+        // Reset when view appears so you can re‑scan if needed
+        .onAppear { didFinishCurrent = false }
     }
 
     @ViewBuilder
     private func contentBody() -> some View {
         switch selectedTab {
         case .qr:
-            // full‑screen QR preview
             ZStack {
                 QRScannerView { code in
-                    if let idx = qrClueURLs.firstIndex(of: code) {
-                        discoveredClues.insert(idx + 1)
+                    guard !didFinishCurrent,
+                          let idx = qrClueURLs.firstIndex(of: code) else { return }
+                    discoveredClues.insert(idx + 1)
+                    if discoveredClues.count == qrClueURLs.count {
+                        finish(.camera)
                     }
                 }
-
                 VStack {
                     Spacer()
                     clueLabels(count: qrClueURLs.count, lit: discoveredClues)
                 }
             }
-            .onChange(of: discoveredClues) { new in
-                guard new.count == qrClueURLs.count, !didScheduleCompletion else { return }
-                didScheduleCompletion = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    onNext(.camera)
-                }
-            }
 
         case .scan:
-            CameraFeedView(onAllDetected: { onNext(.camera) },
-                           onNext:       { onNext(.camera) })
+            CameraFeedView(
+                onAllDetected: { finish(.camera) },
+                onNext:       { finish(.camera) }
+            )
 
         case .listen:
-            ListenDetectionView(onAllDetected: { onNext(.microphone) },
-                                onNext:       { onNext(.microphone) })
+            ListenDetectionView(
+                onAllDetected: { finish(.microphone) },
+                onNext:       { finish(.microphone) }
+            )
 
         case .move:
-            MoveClassifierView(onDone: { onNext(.ar) },
-                               onBack: onBack)
+            MoveClassifierView(
+                onDone: { finish(.ar) },
+                onBack: onBack
+            )
 
         case .nfc:
             ZStack {
@@ -97,8 +95,8 @@ struct ScannerContainerView: View {
                         .foregroundColor(.white)
                     Spacer()
                     Button("Scan NFC") {
+                        discoveredTagClues.removeAll()
                         lastTagData = ""
-                        tagScanner.scannedData.removeAll()
                         tagScanner.beginScanning()
                     }
                     .frame(maxWidth: .infinity)
@@ -119,7 +117,8 @@ struct ScannerContainerView: View {
                 }
             }
             .onReceive(tagScanner.$scannedData) { messages in
-                guard let raw = messages.last else { return }
+                guard !didFinishCurrent,
+                      let raw = messages.last else { return }
                 let clean = raw.trimmingCharacters(in: .controlCharacters)
                 lastTagData = clean
                 switch clean {
@@ -130,11 +129,18 @@ struct ScannerContainerView: View {
                 default: break
                 }
                 if discoveredTagClues.count == 4 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                        onNext(.nfc)
-                    }
+                    finish(.nfc)
                 }
             }
+        }
+    }
+
+    /// Mark this tab finished and fire the callback once
+    private func finish(_ tech: ScanTech) {
+        guard !didFinishCurrent else { return }
+        didFinishCurrent = true
+        DispatchQueue.main.async {
+            onNext(tech)
         }
     }
 
@@ -172,8 +178,7 @@ struct ScannerContainerView: View {
                     VStack(spacing: 4) {
                         Image(systemName: tab.iconName)
                             .font(.system(size: 20))
-                        Text(tab.label)
-                            .font(.caption2)
+                        Text(tab.label).font(.caption2)
                     }
                 }
                 .foregroundColor(selectedTab == tab ? .teal : .gray)
@@ -219,5 +224,22 @@ struct ScannerContainerView: View {
             case .nfc:    return "wave.3.right"
             }
         }
+    }
+}
+
+struct ScannerContainerView_Previews: PreviewProvider {
+    static var previews: some View {
+        ScannerContainerView(
+            usageLeft: [
+                .camera: 3,
+                .nfc: 2,
+                .microphone: 2,
+                .ar: 2
+            ],
+            onBack: {},
+            onNext: { tech in
+                print("Finished:", tech)
+            }
+        )
     }
 }

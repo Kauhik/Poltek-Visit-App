@@ -45,6 +45,7 @@ struct CodeView: View {
 
             VStack(spacing: 24) {
                 ZStack {
+                    // Enlarged code box
                     RoundedRectangle(cornerRadius: 20)
                         .fill(
                             LinearGradient(
@@ -53,17 +54,17 @@ struct CodeView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 200, height: 200)
+                        .frame(width: 300, height: 300)
                         .shadow(radius: 10)
                         .zIndex(1)
 
                     VStack(spacing: 8) {
                         Text(code)
-                            .font(.system(size: 80, weight: .bold))
+                            .font(.system(size: 120, weight: .bold))
                             .foregroundColor(.white)
 
                         Text(codeLabel)
-                            .font(.headline)
+                            .font(.title)
                             .foregroundColor(.white)
                     }
                     .zIndex(2)
@@ -99,6 +100,8 @@ struct CodeView: View {
         }
     }
 }
+
+// MARK: - Exploding Emoji
 
 struct ExplodingEmojiView: View {
     let emoji: String
@@ -146,6 +149,6 @@ struct ExplodingEmojiView: View {
 
 struct CodeView_Previews: PreviewProvider {
     static var previews: some View {
-        CodeView(code: "1", codeLabel: "Code A") { }
+        CodeView(code: "CDAB", codeLabel: "All Codes") { }
     }
 }
