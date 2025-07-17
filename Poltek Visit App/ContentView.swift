@@ -47,7 +47,6 @@ struct ContentView: View {
                 onScan: { currentPage = .scanner },
                 onSelect: { _ in currentPage = .puzzleSelect }
             )
-            .padding()
 
         case .puzzleSelect:
             PuzzleTypeView(
@@ -62,14 +61,14 @@ struct ContentView: View {
                 },
                 onBack: { currentPage = .scanner }
             )
-            .padding()
+          //  .padding()
 
         case .puzzleWords:
             MatchingPuzzleView(
                 onComplete: { currentPage = .codeReveal },
                 onBack:     { currentPage = .puzzleSelect }
             )
-            .padding()
+          //  .padding()
 
         case .puzzleHolidays:
             HolidayPuzzleView(
@@ -83,21 +82,21 @@ struct ContentView: View {
                 onComplete: { currentPage = .codeReveal },
                 onBack:     { currentPage = .puzzleSelect }
             )
-            .padding()
+        //    .padding()
 
         case .puzzleDailyFood:
             DailyFoodPuzzleView(
                 onComplete: { currentPage = .codeReveal },
                 onBack:     { currentPage = .puzzleSelect }
             )
-            .padding()
+       //     .padding()
 
         case .puzzlePlaces:
             PlacesPuzzleView(
                 onComplete: { currentPage = .codeReveal },
                 onBack:     { currentPage = .puzzleSelect }
             )
-            .padding()
+        //    .padding()
 
         case .codeReveal:
             CodeView {
@@ -106,7 +105,7 @@ struct ContentView: View {
                 }
                 currentPage = .clueGrid
             }
-            .padding()
+        //    .padding()
         }
     }
 }
