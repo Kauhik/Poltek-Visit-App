@@ -77,6 +77,8 @@ struct TeamInputView: View {
                             }
 
                             Button("Play") {
+                                // dismiss keyboard immediately
+                                isFocused = false
                                 attemptPlay()
                             }
                             .disabled(!isComplete)
