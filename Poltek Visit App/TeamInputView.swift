@@ -4,7 +4,7 @@
 //
 //  Created by Kaushik Manian on 30/6/25.
 //
-
+    
 import SwiftUI
 import Combine
 
@@ -24,7 +24,6 @@ final class KeyboardObserver: ObservableObject {
             .map { _ in CGFloat(0) }
 
         Publishers.Merge(show, hide)
-            // shrink the shift so the box rides up only 30% of the keyboard height
             .map { $0 * 0.3 }
             .assign(to: \.height, on: self)
             .store(in: &cancellables)
@@ -37,9 +36,13 @@ struct TeamInputView: View {
 
     @FocusState private var isFocused: Bool
     @StateObject private var keyboard = KeyboardObserver()
+    @State private var showToast = false
 
     /// Enable Play as soon as at least one digit is entered
     private var isComplete: Bool { teamNumber.count >= 1 }
+
+    /// Valid team number range
+    private let validRange = 1...55
 
     var body: some View {
         ZStack {
@@ -61,35 +64,56 @@ struct TeamInputView: View {
 
                     Spacer().frame(height: 20)
 
-                    VStack(spacing: 24) {
-                        Text("Enter your group number")
+                    // input card + toast
+                    VStack(spacing: 12) {
+                        // the input card
+                        VStack(spacing: 24) {
+                            Text("Enter your group number")
+                                .font(.headline)
+
+                            HStack(spacing: 16) {
+                                DigitCircleView(digit: teamNumber.digit(at: 0))
+                                DigitCircleView(digit: teamNumber.digit(at: 1))
+                            }
+
+                            Button("Play") {
+                                attemptPlay()
+                            }
+                            .disabled(!isComplete)
                             .font(.headline)
-
-                        HStack(spacing: 16) {
-                            DigitCircleView(digit: teamNumber.digit(at: 0))
-                            DigitCircleView(digit: teamNumber.digit(at: 1))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Color("AccentTeal").opacity(isComplete ? 1 : 0.5))
+                            .foregroundColor(.white)
+                            .cornerRadius(30)
                         }
+                        .padding(24)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .padding(.horizontal, 24)
+                        .onTapGesture { isFocused = true }
 
-                        Button("Play") {
-                            onPlay()
+                        // toast message below the box
+                        if showToast {
+                            Text("pls give a valid team number for 1 to 55")
+                                .font(.subheadline)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.black.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                                .padding(.horizontal, 24)
+                                .onAppear {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                        withAnimation { showToast = false }
+                                    }
+                                }
                         }
-                        .disabled(!isComplete)
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color("AccentTeal").opacity(isComplete ? 1 : 0.5))
-                        .foregroundColor(.white)
-                        .cornerRadius(30)
                     }
-                    .padding(24)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding(.horizontal, 24)
-                    .onTapGesture { isFocused = true }
 
                     Spacer()
                 }
-                // bottom padding now only 30% of keyboard height
                 .padding(.bottom, keyboard.height)
                 .animation(.easeOut, value: keyboard.height)
             }
@@ -99,7 +123,6 @@ struct TeamInputView: View {
                 .keyboardType(.numberPad)
                 .focused($isFocused)
                 .onChange(of: teamNumber) { new in
-                    // strip non‑digits, cap at 2 characters
                     let nums = new.filter(\.isNumber)
                     teamNumber = String(nums.prefix(2))
                 }
@@ -111,6 +134,16 @@ struct TeamInputView: View {
                 isFocused = true
             }
         }
+    }
+
+    private func attemptPlay() {
+        guard let n = Int(teamNumber),
+              validRange.contains(n)
+        else {
+            withAnimation { showToast = true }
+            return
+        }
+        onPlay()
     }
 }
 
