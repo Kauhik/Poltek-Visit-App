@@ -5,7 +5,6 @@
 //  Created by Kaushik Manian on 27/6/25.
 //
 
-
 import SwiftUI
 
 enum Page {
@@ -24,7 +23,6 @@ struct ContentView: View {
     @State private var combinationUnlocked: Bool = false
     @State private var letterIndices: [String: Int] = [:]
 
-    /// Pull team info (including the 4‑digit `pin`) out of your CSV‑backed store.
     private var teamInfo: TeamInfo? {
         guard let n = Int(teamNumber) else { return nil }
         return TeamCodes.shared.info(for: n)
@@ -81,31 +79,31 @@ struct ContentView: View {
         case .puzzleWords:
             MatchingPuzzleView(
                 onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onBack:     { currentPage = .scanner }      // now returns to scanner
             )
 
         case .puzzleHolidays:
             HolidayPuzzleView(
                 onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onBack:     { currentPage = .scanner }      // now returns to scanner
             )
 
         case .puzzleDailyLife:
             DailyLifePuzzleView(
                 onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onBack:     { currentPage = .scanner }      // now returns to scanner
             )
 
         case .puzzleDailyFood:
             DailyFoodPuzzleView(
                 onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onBack:     { currentPage = .scanner }      // now returns to scanner
             )
 
         case .puzzlePlaces:
             PlacesPuzzleView(
                 onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .puzzleSelect }
+                onBack:     { currentPage = .scanner }      // now returns to scanner
             )
 
         case .codeReveal:
@@ -113,11 +111,9 @@ struct ContentView: View {
                 let pin = info.pin
 
                 if combinationUnlocked {
-                    // show a Click Done screen after all four are unlocked
                     CodeView(code: "", codeLabel: "Click Done") {
                         currentPage = .clueGrid
                     }
-
                 } else if
                     let last = unlockedLetters.last,
                     let idx  = letterIndices[last],
