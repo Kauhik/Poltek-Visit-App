@@ -38,7 +38,8 @@ struct TeamInputView: View {
     @FocusState private var isFocused: Bool
     @StateObject private var keyboard = KeyboardObserver()
 
-    private var isComplete: Bool { teamNumber.count == 2 }
+    /// Enable Play as soon as at least one digit is entered
+    private var isComplete: Bool { teamNumber.count >= 1 }
 
     var body: some View {
         ZStack {
@@ -98,6 +99,7 @@ struct TeamInputView: View {
                 .keyboardType(.numberPad)
                 .focused($isFocused)
                 .onChange(of: teamNumber) { new in
+                    // strip non‑digits, cap at 2 characters
                     let nums = new.filter(\.isNumber)
                     teamNumber = String(nums.prefix(2))
                 }
