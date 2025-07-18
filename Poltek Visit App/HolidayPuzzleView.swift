@@ -90,7 +90,7 @@ struct HolidayPuzzleView: View {
             .navigationTitle("Holidays Puzzle")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back", action: onBack)
+//                    Button("Back", action: onBack)
                 }
             }
         }

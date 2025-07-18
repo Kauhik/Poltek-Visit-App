@@ -84,7 +84,7 @@ struct DailyFoodPuzzleView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back", action: onBack)
+//                    Button("Back", action: onBack)
                 }
             }
             .onReceive(data.$pairs) { all in

@@ -23,6 +23,13 @@ struct ContentView: View {
     @State private var combinationUnlocked: Bool = false
     @State private var letterIndices: [String: Int] = [:]
 
+    /// Which tab the scanner was on
+    @State private var scannerSelectedTab: ScannerContainerView.Tab = .qr
+
+    /// Puzzle flow state (unchanged from before)
+    @State private var remainingPuzzles: [Page] = []
+    @State private var currentPuzzle: Page?
+
     private var teamInfo: TeamInfo? {
         guard let n = Int(teamNumber) else { return nil }
         return TeamCodes.shared.info(for: n)
@@ -32,35 +39,29 @@ struct ContentView: View {
         switch currentPage {
         case .teamEntry:
             TeamInputView(teamNumber: $teamNumber) {
-                unlockedLetters = []
-                combinationUnlocked = false
-                usageLeft = Dictionary(uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) })
-                let perm = Array(0..<4).shuffled()
-                letterIndices = Dictionary(uniqueKeysWithValues: zip(["A","B","C","D"], perm))
+                resetSession()
                 currentPage = .clueGrid
             }
 
         case .clueGrid:
-            if let info = teamInfo {
-                ClueListView(
-                    teamNumber:          teamNumber,
-                    unlockedLetters:     Set(unlockedLetters),
-                    pin:                 info.pin,
-                    letterIndices:       letterIndices,
-                    combinationUnlocked: combinationUnlocked
-                ) {
-                    currentPage = .scanner
-                }
-            } else {
-                EmptyView()
+            ClueListView(
+                teamNumber:          teamNumber,
+                unlockedLetters:     Set(unlockedLetters),
+                pin:                 teamInfo?.pin ?? "",
+                letterIndices:       letterIndices,
+                combinationUnlocked: combinationUnlocked
+            ) {
+                currentPage = .scanner
             }
 
         case .scanner:
             ScannerContainerView(
-                usageLeft: usageLeft,
-                onBack:    { currentPage = .clueGrid },
-                onNext:    { tech in
+                selectedTab: $scannerSelectedTab,
+                usageLeft:   usageLeft,
+                onBack:      { currentPage = .clueGrid },
+                onNext:      { tech in
                     usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
+                    currentPuzzle = nil
                     currentPage = .puzzleSelect
                 }
             )
@@ -68,76 +69,105 @@ struct ContentView: View {
 
         case .puzzleSelect:
             Color.clear.onAppear {
-                let puzzles: [Page] = [
-                    .puzzleWords, .puzzleHolidays,
-                    .puzzleDailyLife, .puzzleDailyFood,
-                    .puzzlePlaces
-                ]
-                currentPage = puzzles.randomElement()!
+                if currentPuzzle == nil {
+                    guard !remainingPuzzles.isEmpty else {
+                        currentPage = .clueGrid
+                        return
+                    }
+                    let choice = remainingPuzzles.randomElement()!
+                    remainingPuzzles.removeAll { $0 == choice }
+                    currentPuzzle = choice
+                }
+                currentPage = currentPuzzle!
             }
 
         case .puzzleWords:
             MatchingPuzzleView(
-                onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .scanner }      // now returns to scanner
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
             )
 
         case .puzzleHolidays:
             HolidayPuzzleView(
-                onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .scanner }      // now returns to scanner
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
             )
 
         case .puzzleDailyLife:
             DailyLifePuzzleView(
-                onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .scanner }      // now returns to scanner
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
             )
 
         case .puzzleDailyFood:
             DailyFoodPuzzleView(
-                onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .scanner }      // now returns to scanner
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
             )
 
         case .puzzlePlaces:
             PlacesPuzzleView(
-                onComplete: { advanceUnlock(); currentPage = .codeReveal },
-                onBack:     { currentPage = .scanner }      // now returns to scanner
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
             )
 
         case .codeReveal:
-            if let info = teamInfo {
-                let pin = info.pin
-
-                if combinationUnlocked {
-                    CodeView(code: "", codeLabel: "Click Done") {
-                        currentPage = .clueGrid
-                    }
-                } else if
-                    let last = unlockedLetters.last,
-                    let idx  = letterIndices[last],
-                    idx < pin.count
-                {
-                    let digit = String(pin[pin.index(pin.startIndex, offsetBy: idx)])
-                    CodeView(code: digit, codeLabel: "Code \(last)") {
-                        currentPage = .clueGrid
-                    }
-                } else {
-                    CodeView(code: "0", codeLabel: "Code") {
-                        currentPage = .clueGrid
-                    }
+            let pin = teamInfo?.pin ?? ""
+            if combinationUnlocked {
+                CodeView(code: "", codeLabel: "Click Done") {
+                    currentPage = .clueGrid
+                }
+            } else if
+                let last = unlockedLetters.last,
+                let idx  = letterIndices[last],
+                idx < pin.count
+            {
+                let digit = String(pin[pin.index(pin.startIndex, offsetBy: idx)])
+                CodeView(code: digit, codeLabel: "Code \(last)") {
+                    currentPage = .clueGrid
                 }
             } else {
-                EmptyView()
+                CodeView(code: "0", codeLabel: "Code") {
+                    currentPage = .clueGrid
+                }
             }
         }
     }
 
+    private func resetSession() {
+        unlockedLetters = []
+        combinationUnlocked = false
+        usageLeft = Dictionary(uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) })
+        letterIndices = Dictionary(uniqueKeysWithValues: zip(["A","B","C","D"], (0..<4).shuffled()))
+        remainingPuzzles = [.puzzleWords, .puzzleHolidays, .puzzleDailyLife, .puzzleDailyFood, .puzzlePlaces]
+        currentPuzzle = nil
+        scannerSelectedTab = .qr
+    }
+
     private func advanceUnlock() {
-        let allLetters = ["A","B","C","D"]
+        let all = ["A","B","C","D"]
         if unlockedLetters.count < 4 {
-            unlockedLetters.append(allLetters[unlockedLetters.count])
+            unlockedLetters.append(all[unlockedLetters.count])
         } else {
             combinationUnlocked = true
         }
