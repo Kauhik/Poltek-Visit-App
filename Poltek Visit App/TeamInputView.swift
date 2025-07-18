@@ -8,18 +8,24 @@
 import SwiftUI
 import Combine
 
+/// Observes keyboard frame changes.
 final class KeyboardObserver: ObservableObject {
     @Published var height: CGFloat = 0
     private var cancellables = Set<AnyCancellable>()
+
     init() {
         let show = NotificationCenter.default
             .publisher(for: UIResponder.keyboardWillShowNotification)
             .compactMap { $0.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect }
             .map(\.height)
+
         let hide = NotificationCenter.default
             .publisher(for: UIResponder.keyboardWillHideNotification)
             .map { _ in CGFloat(0) }
+
         Publishers.Merge(show, hide)
+            // shrink the shift so the box rides up only 30% of the keyboard height
+            .map { $0 * 0.3 }
             .assign(to: \.height, on: self)
             .store(in: &cancellables)
     }
@@ -37,7 +43,9 @@ struct TeamInputView: View {
     var body: some View {
         ZStack {
             Image("Background")
-                .resizable().scaledToFill().ignoresSafeArea()
+                .resizable()
+                .scaledToFill()
+                .ignoresSafeArea()
                 .onTapGesture { isFocused = false }
 
             GeometryReader { geo in
@@ -55,10 +63,12 @@ struct TeamInputView: View {
                     VStack(spacing: 24) {
                         Text("Enter your group number")
                             .font(.headline)
+
                         HStack(spacing: 16) {
                             DigitCircleView(digit: teamNumber.digit(at: 0))
                             DigitCircleView(digit: teamNumber.digit(at: 1))
                         }
+
                         Button("Play") {
                             onPlay()
                         }
@@ -78,10 +88,12 @@ struct TeamInputView: View {
 
                     Spacer()
                 }
+                // bottom padding now only 30% of keyboard height
                 .padding(.bottom, keyboard.height)
                 .animation(.easeOut, value: keyboard.height)
             }
 
+            // hidden text field to summon the number pad
             TextField("", text: $teamNumber)
                 .keyboardType(.numberPad)
                 .focused($isFocused)
@@ -89,10 +101,11 @@ struct TeamInputView: View {
                     let nums = new.filter(\.isNumber)
                     teamNumber = String(nums.prefix(2))
                 }
-                .frame(width: 0, height: 0).opacity(0)
+                .frame(width: 0, height: 0)
+                .opacity(0)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now()+1) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 isFocused = true
             }
         }
