@@ -17,7 +17,7 @@ enum Page {
 struct ContentView: View {
     @State private var currentPage: Page = .teamEntry
     @State private var teamNumber: String = ""
-    @State private var usageLeft: [ScanTech: Int] = Dictionary(
+    @State private var usageLeft: [ScanTech:Int] = Dictionary(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
     @State private var unlockedLetters: [String] = []
@@ -34,11 +34,9 @@ struct ContentView: View {
         switch currentPage {
         case .teamEntry:
             TeamInputView(teamNumber: $teamNumber) {
-                // reset state when you first hit Play
                 unlockedLetters = []
                 combinationUnlocked = false
                 usageLeft = Dictionary(uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) })
-                // shuffle A‑D into letterIndices
                 let perm = Array(0..<4).shuffled()
                 letterIndices = Dictionary(uniqueKeysWithValues: zip(["A","B","C","D"], perm))
                 currentPage = .clueGrid
@@ -71,16 +69,14 @@ struct ContentView: View {
             .ignoresSafeArea()
 
         case .puzzleSelect:
-            Color.clear
-                .onAppear {
-                    // pick one random puzzle
-                    let puzzles: [Page] = [
-                        .puzzleWords, .puzzleHolidays,
-                        .puzzleDailyLife, .puzzleDailyFood,
-                        .puzzlePlaces
-                    ]
-                    currentPage = puzzles.randomElement()!
-                }
+            Color.clear.onAppear {
+                let puzzles: [Page] = [
+                    .puzzleWords, .puzzleHolidays,
+                    .puzzleDailyLife, .puzzleDailyFood,
+                    .puzzlePlaces
+                ]
+                currentPage = puzzles.randomElement()!
+            }
 
         case .puzzleWords:
             MatchingPuzzleView(
@@ -117,7 +113,8 @@ struct ContentView: View {
                 let pin = info.pin
 
                 if combinationUnlocked {
-                    CodeView(code: pin, codeLabel: "All Codes") {
+                    // show a Click Done screen after all four are unlocked
+                    CodeView(code: "", codeLabel: "Click Done") {
                         currentPage = .clueGrid
                     }
 
@@ -142,7 +139,7 @@ struct ContentView: View {
     }
 
     private func advanceUnlock() {
-        let allLetters = ["A","B","C","D","E"]
+        let allLetters = ["A","B","C","D"]
         if unlockedLetters.count < 4 {
             unlockedLetters.append(allLetters[unlockedLetters.count])
         } else {
@@ -150,6 +147,3 @@ struct ContentView: View {
         }
     }
 }
-
-
-//testing git

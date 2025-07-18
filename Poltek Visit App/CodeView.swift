@@ -5,7 +5,6 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
-// CodeView.swift
 import SwiftUI
 
 struct CodeView: View {
@@ -13,7 +12,6 @@ struct CodeView: View {
     let codeLabel: String
     var onDone: () -> Void
 
-    /// Expanded set of emojis for confetti
     private let emojis = [
         "🎉", "🔒", "🔓", "✨", "🎈",
         "🥳", "🎊", "🎂", "💥", "🌟",
@@ -40,13 +38,13 @@ struct CodeView: View {
                         delay: Double(index) * 0.15
                     )
                     .allowsHitTesting(false)
-                    .zIndex(0)
                 }
             }
 
-            VStack(spacing: 24) {
+            VStack(spacing: 32) {
+                // Gradient box
                 ZStack {
-                    RoundedRectangle(cornerRadius: 20)
+                    RoundedRectangle(cornerRadius: 24)
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [Color.orange, Color.pink]),
@@ -54,27 +52,32 @@ struct CodeView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 300, height: 300)
+                        // expand width to 90% of screen and height to 250
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 250)
+                        .padding(.horizontal, 24)
                         .shadow(radius: 10)
 
+                    // Contents
                     VStack(spacing: 8) {
-                        Text(code)
-                            .font(.system(size: 120, weight: .bold))
-                            .foregroundColor(.white)
+                        if !code.isEmpty {
+                            Text(code)
+                                .font(.system(size: 120, weight: .bold))
+                                .foregroundColor(.white)
+                        }
                         Text(codeLabel)
-                            .font(.title)
+                            // larger font when it's "Click Done"
+                            .font(.system(
+                                size: code.isEmpty ?  fortyEightSize : 28,
+                                weight: code.isEmpty ? .bold : .medium
+                            ))
                             .foregroundColor(.white)
                     }
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
                 }
 
-                Text("Fantastic Work!")
-                    .font(.title)
-                    .bold()
-
-                Text("You got a code!")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-
+                // Done button
                 Button("Done", action: onDone)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
@@ -86,16 +89,16 @@ struct CodeView: View {
             }
         }
         .onAppear {
-            // Hide emojis after 6 seconds
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
                 withAnimation { showEmojis = false }
             }
         }
     }
+
+    // dynamic font-size helper
+    private var fortyEightSize: CGFloat { 48 }
 }
 
-
-/// A single “particle” of emoji that explodes outward.
 struct ExplodingEmojiView: View {
     let emoji: String
     let delay: Double
@@ -121,7 +124,6 @@ struct ExplodingEmojiView: View {
                 .rotationEffect(.degrees(rot))
                 .scaleEffect(scale)
                 .onAppear {
-                    // compute target normalized offsets
                     let targetX = 0.5 + cos(angle) * radiusNorm
                     let targetY = 0.45 + sin(angle) * radiusNorm
 
