@@ -207,3 +207,10 @@ fileprivate struct CardView: View {
         }
     }
 }
+
+struct MatchingPuzzleView_Previews: PreviewProvider {
+    static var previews: some View {
+        MatchingPuzzleView(onComplete: {}, onBack: {})
+            .previewDevice("iPhone 14")
+    }
+}

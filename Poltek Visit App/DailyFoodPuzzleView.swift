@@ -9,13 +9,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct DailyFoodPuzzleView: View {
-    /// Called once all 5 pairs are placed correctly
+    /// Called once all entries are placed correctly
     var onComplete: () -> Void
     /// Called when the Back button is tapped
     var onBack: () -> Void
 
     @StateObject private var data = DailyFoodData()
     @State private var items: [DailyFoodPair] = []
+    @State private var pool: [DailyFoodPair] = []
     @State private var results: [Int: Bool] = [:]
 
     var body: some View {
@@ -32,7 +33,7 @@ struct DailyFoodPuzzleView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    // Title & subtitle
+                    // Title section
                     VStack(spacing: 8) {
                         Text("Daily Food")
                             .font(.largeTitle)
@@ -46,7 +47,7 @@ struct DailyFoodPuzzleView: View {
                     .padding(.top, 32)
                     .padding(.horizontal)
 
-                    // Draggable items container
+                    // Draggable items and drop zones
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 24) {
                             VStack(spacing: 12) {
@@ -56,8 +57,6 @@ struct DailyFoodPuzzleView: View {
                                         .padding()
                                         .background(backgroundColor(for: pair.id))
                                         .cornerRadius(8)
-                                        .overlay(RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(Color.orange, lineWidth: 1))
                                         .opacity(results[pair.id] == true ? 0.5 : 1)
                                         .disabled(results[pair.id] == true)
                                         .onDrag {
@@ -84,32 +83,30 @@ struct DailyFoodPuzzleView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Back", action: onBack)
+                    Button("Back", action: onBack)
                 }
             }
             .onReceive(data.$pairs) { all in
-                let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
-                guard filtered.count >= 5 else {
+                // Filter to valid origins
+                let filtered = all.filter { ["Singapore", "Indonesia"].contains($0.origin) }
+                guard filtered.count >= 8 else {
+                    // If fewer than 8 available, show all
                     items = filtered
+                    pool = []
+                    results = [:]
                     return
                 }
+                // Select 8 items, ensuring both origins present
                 var chosen: [DailyFoodPair]
                 repeat {
-                    chosen = Array(filtered.shuffled().prefix(5))
+                    chosen = Array(filtered.shuffled().prefix(8))
                 } while !(
                     chosen.contains(where: { $0.origin == "Singapore" }) &&
                     chosen.contains(where: { $0.origin == "Indonesia" })
                 )
                 items = chosen
+                pool = filtered.filter { p in !chosen.contains(where: { $0.id == p.id }) }
                 results = [:]
-            }
-            .onChange(of: results) { new in
-                if results.count == items.count,
-                   results.values.allSatisfy({ $0 }) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        onComplete()
-                    }
-                }
             }
         }
     }
@@ -153,14 +150,32 @@ struct DailyFoodPuzzleView: View {
                 let id = Int(str),
                 let pair = items.first(where: { $0.id == id })
             else { return }
+
             let correct = (pair.origin == country)
             DispatchQueue.main.async {
                 if correct {
                     results[id] = true
+                    // Check if all placed correctly
+                    if results.count == items.count,
+                       results.values.allSatisfy({ $0 }) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            onComplete()
+                        }
+                    }
                 } else {
+                    // Wrong drop: mark and replace with animation
                     results[id] = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        results.removeValue(forKey: id)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.easeInOut) {
+                            if let index = items.firstIndex(where: { $0.id == id }),
+                               let replacement = pool.randomElement() {
+                                let old = items[index]
+                                items[index] = replacement
+                                pool.removeAll(where: { $0.id == replacement.id })
+                                pool.append(old)
+                                results.removeValue(forKey: id)
+                            }
+                        }
                     }
                 }
             }
@@ -168,3 +183,13 @@ struct DailyFoodPuzzleView: View {
         return true
     }
 }
+
+
+
+struct DailyFood: PreviewProvider {
+    static var previews: some View {
+        DailyFoodPuzzleView (onComplete: {}, onBack: {})
+            .previewDevice("iPhone 14")
+    }
+}
+
