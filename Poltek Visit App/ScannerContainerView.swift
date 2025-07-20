@@ -10,12 +10,12 @@ import AVFoundation
 import CoreNFC
 
 struct ScannerContainerView: View {
-    /// Now injected from ContentView
     @Binding var selectedTab: Tab
+    @Binding var completedTabs: Set<Tab>
 
     let usageLeft: [ScanTech: Int]
-    var onBack:   () -> Void
-    var onNext:   (ScanTech) -> Void
+    var onBack: () -> Void
+    var onNext: (ScanTech) -> Void
 
     @State private var discoveredClues: Set<Int> = []
     @State private var discoveredTagClues: Set<Int> = []
@@ -48,20 +48,11 @@ struct ScannerContainerView: View {
     @ViewBuilder
     private func contentBody() -> some View {
         switch selectedTab {
-        case .qr:
-            qrView
-
-        case .scan:
-            scanView
-
-        case .listen:
-            listenView
-
-        case .move:
-            moveView
-
-        case .nfc:
-            nfcView
+        case .qr:     qrView
+        case .scan:   scanView
+        case .listen: listenView
+        case .move:   moveView
+        case .nfc:    nfcView
         }
     }
 
@@ -157,7 +148,10 @@ struct ScannerContainerView: View {
     private func finish(_ tech: ScanTech) {
         guard !didFinishCurrent else { return }
         didFinishCurrent = true
-        DispatchQueue.main.async { onNext(tech) }
+        DispatchQueue.main.async {
+            onNext(tech)
+            completedTabs.insert(selectedTab)
+        }
     }
 
     private func overlayBackButton() -> some View {
@@ -185,26 +179,6 @@ struct ScannerContainerView: View {
         }
     }
 
-    private var bottomTabBar: some View {
-        HStack {
-            ForEach(Tab.allCases) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: tab.iconName)
-                            .font(.system(size: 20))
-                        Text(tab.label)
-                            .font(.caption2)
-                    }
-                }
-                .foregroundColor(selectedTab == tab ? .teal : .gray)
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .frame(height: 80)
-    }
-
     private func clueLabels(count: Int, lit: Set<Int>) -> some View {
         HStack(spacing: 12) {
             ForEach(1...count, id: \.self) { idx in
@@ -218,6 +192,27 @@ struct ScannerContainerView: View {
         }
         .padding(.horizontal)
         .padding(.bottom, 8)
+    }
+
+    private var bottomTabBar: some View {
+        HStack {
+            ForEach(Tab.allCases) { tab in
+                Button {
+                    selectedTab = tab
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 20))
+                        Text(tab.label)
+                            .font(.caption2)
+                    }
+                }
+                .disabled(completedTabs.contains(tab))
+                .opacity(completedTabs.contains(tab) ? 0.5 : 1.0)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .frame(height: 80)
     }
 
     enum Tab: String, CaseIterable, Identifiable {
@@ -243,3 +238,6 @@ struct ScannerContainerView: View {
         }
     }
 }
+
+
+

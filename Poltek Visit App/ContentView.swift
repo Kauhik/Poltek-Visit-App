@@ -1,3 +1,5 @@
+
+
 //
 //  ContentView.swift
 //  Poltek Visit App
@@ -6,10 +8,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 enum Page {
-    case teamEntry, clueGrid, scanner, puzzleSelect
-    case puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
+    case teamEntry, clueGrid, scanner
+    case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
     case codeReveal
 }
 
@@ -23,10 +26,11 @@ struct ContentView: View {
     @State private var combinationUnlocked: Bool = false
     @State private var letterIndices: [String: Int] = [:]
 
-    /// Which tab the scanner was on
+    // Scanner state
     @State private var scannerSelectedTab: ScannerContainerView.Tab = .qr
+    @State private var completedScanTabs: Set<ScannerContainerView.Tab> = []
 
-    /// Puzzle flow state (unchanged from before)
+    // Puzzle flow
     @State private var remainingPuzzles: [Page] = []
     @State private var currentPuzzle: Page?
 
@@ -51,16 +55,26 @@ struct ContentView: View {
                 letterIndices:       letterIndices,
                 combinationUnlocked: combinationUnlocked
             ) {
+                // Before showing scanner, pick the first tab not yet completed
+                let nextTab = ScannerContainerView.Tab.allCases.first {
+                    !completedScanTabs.contains($0)
+                } ?? .qr
+                scannerSelectedTab = nextTab
                 currentPage = .scanner
             }
 
         case .scanner:
             ScannerContainerView(
-                selectedTab: $scannerSelectedTab,
-                usageLeft:   usageLeft,
-                onBack:      { currentPage = .clueGrid },
-                onNext:      { tech in
+                selectedTab:  $scannerSelectedTab,
+                completedTabs: $completedScanTabs,
+                usageLeft:    usageLeft,
+                onBack:       { currentPage = .clueGrid },
+                onNext:       { tech in
+                    // decrement usage
                     usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
+                    // mark this tab done
+                    completedScanTabs.insert(scannerSelectedTab)
+                    // advance to puzzle
                     currentPuzzle = nil
                     currentPage = .puzzleSelect
                 }
@@ -161,7 +175,9 @@ struct ContentView: View {
         letterIndices = Dictionary(uniqueKeysWithValues: zip(["A","B","C","D"], (0..<4).shuffled()))
         remainingPuzzles = [.puzzleWords, .puzzleHolidays, .puzzleDailyLife, .puzzleDailyFood, .puzzlePlaces]
         currentPuzzle = nil
+        // Reset scanner state
         scannerSelectedTab = .qr
+        completedScanTabs = []
     }
 
     private func advanceUnlock() {
@@ -173,3 +189,6 @@ struct ContentView: View {
         }
     }
 }
+
+
+
