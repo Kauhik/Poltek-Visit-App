@@ -191,3 +191,12 @@ fileprivate struct CardView: View {
         }
     }
 }
+
+
+struct HolidayPuzzle: PreviewProvider {
+    static var previews: some View {
+        HolidayPuzzleView (onComplete: {}, onBack: {})
+            .previewDevice("iPhone 14")
+    }
+}
+
