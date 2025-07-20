@@ -49,7 +49,8 @@ struct MoveClassifierView: View {
 
                 // MARK: Controls + SG/ID
                 HStack(spacing: 16) {
-                    // Back button
+                    /*
+                    // Commented out back button
                     Button(action: {
                         vm.stop()
                         onBack()
@@ -61,8 +62,10 @@ struct MoveClassifierView: View {
                             .background(Color.black.opacity(0.5))
                             .clipShape(Circle())
                     }
+                    */
 
-                    // Flip camera
+                    /*
+                    // Commented out flip camera button
                     Button("Flip") {
                         vm.toggleCamera()
                     }
@@ -71,6 +74,7 @@ struct MoveClassifierView: View {
                     .background(Color.black.opacity(0.5))
                     .foregroundColor(.white)
                     .cornerRadius(8)
+                    */
 
                     // SG / ID indicators
                     HStack(spacing: 12) {
@@ -90,7 +94,8 @@ struct MoveClassifierView: View {
 
                     Spacer()
 
-                    // Manual Done
+                    /*
+                    // Commented out done button
                     Button("Done") {
                         vm.stop()
                         onDone()
@@ -100,6 +105,7 @@ struct MoveClassifierView: View {
                     .background(Color.black.opacity(0.5))
                     .foregroundColor(.white)
                     .cornerRadius(8)
+                    */
                 }
                 .padding([.horizontal, .bottom])
             }
