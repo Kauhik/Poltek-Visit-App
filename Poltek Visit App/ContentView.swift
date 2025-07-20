@@ -26,11 +26,10 @@ struct ContentView: View {
     @State private var combinationUnlocked: Bool = false
     @State private var letterIndices: [String: Int] = [:]
 
-    // Scanner state
     @State private var scannerSelectedTab: ScannerContainerView.Tab = .qr
     @State private var completedScanTabs: Set<ScannerContainerView.Tab> = []
+    @State private var nfcScannedClues: Set<Int> = []
 
-    // Puzzle flow
     @State private var remainingPuzzles: [Page] = []
     @State private var currentPuzzle: Page?
 
@@ -55,31 +54,36 @@ struct ContentView: View {
                 letterIndices:       letterIndices,
                 combinationUnlocked: combinationUnlocked
             ) {
-                // Before showing scanner, pick the first tab not yet completed
-                let nextTab = ScannerContainerView.Tab.allCases.first {
+                // reset scanner tab to next unused
+                scannerSelectedTab = ScannerContainerView.Tab.allCases.first {
                     !completedScanTabs.contains($0)
                 } ?? .qr
-                scannerSelectedTab = nextTab
                 currentPage = .scanner
             }
 
         case .scanner:
             ScannerContainerView(
-                selectedTab:  $scannerSelectedTab,
-                completedTabs: $completedScanTabs,
-                usageLeft:    usageLeft,
-                onBack:       { currentPage = .clueGrid },
-                onNext:       { tech in
-                    // decrement usage
+                selectedTab:     $scannerSelectedTab,
+                completedTabs:   $completedScanTabs,
+                nfcScannedClues: $nfcScannedClues,
+                usageLeft:       usageLeft,
+                onBack:          { currentPage = .clueGrid },
+                onNext:          { tech in
                     usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
-                    // mark this tab done
                     completedScanTabs.insert(scannerSelectedTab)
-                    // advance to puzzle
                     currentPuzzle = nil
                     currentPage = .puzzleSelect
                 }
             )
             .ignoresSafeArea()
+            .onAppear {
+                // ensure we never re-enter on a disabled tab
+                if completedScanTabs.contains(scannerSelectedTab) {
+                    scannerSelectedTab = ScannerContainerView.Tab.allCases.first {
+                        !completedScanTabs.contains($0)
+                    } ?? .qr
+                }
+            }
 
         case .puzzleSelect:
             Color.clear.onAppear {
@@ -175,9 +179,9 @@ struct ContentView: View {
         letterIndices = Dictionary(uniqueKeysWithValues: zip(["A","B","C","D"], (0..<4).shuffled()))
         remainingPuzzles = [.puzzleWords, .puzzleHolidays, .puzzleDailyLife, .puzzleDailyFood, .puzzlePlaces]
         currentPuzzle = nil
-        // Reset scanner state
         scannerSelectedTab = .qr
         completedScanTabs = []
+        nfcScannedClues = []
     }
 
     private func advanceUnlock() {
@@ -189,6 +193,3 @@ struct ContentView: View {
         }
     }
 }
-
-
-

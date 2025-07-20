@@ -12,13 +12,13 @@ import CoreNFC
 struct ScannerContainerView: View {
     @Binding var selectedTab: Tab
     @Binding var completedTabs: Set<Tab>
+    @Binding var nfcScannedClues: Set<Int>
 
     let usageLeft: [ScanTech: Int]
     var onBack: () -> Void
     var onNext: (ScanTech) -> Void
 
     @State private var discoveredClues: Set<Int> = []
-    @State private var discoveredTagClues: Set<Int> = []
     @State private var lastTagData: String = ""
     @State private var didFinishCurrent = false
 
@@ -77,14 +77,14 @@ struct ScannerContainerView: View {
     private var scanView: some View {
         CameraFeedView(
             onAllDetected: { finish(.camera) },
-            onNext:       { finish(.camera) }
+            onNext:        { finish(.camera) }
         )
     }
 
     private var listenView: some View {
         ListenDetectionView(
             onAllDetected: { finish(.microphone) },
-            onNext:       { finish(.microphone) }
+            onNext:        { finish(.microphone) }
         )
     }
 
@@ -108,8 +108,6 @@ struct ScannerContainerView: View {
                     .foregroundColor(.white)
                 Spacer()
                 Button("Scan NFC") {
-                    discoveredTagClues.removeAll()
-                    lastTagData = ""
                     tagScanner.beginScanning()
                 }
                 .padding()
@@ -124,7 +122,7 @@ struct ScannerContainerView: View {
                 }
 
                 Spacer()
-                clueLabels(count: 4, lit: discoveredTagClues)
+                clueLabels(count: 4, lit: nfcScannedClues)
             }
         }
         .onReceive(tagScanner.$scannedData) { messages in
@@ -133,13 +131,13 @@ struct ScannerContainerView: View {
             let clean = raw.trimmingCharacters(in: .controlCharacters)
             lastTagData = clean
             switch clean {
-            case "enClue1": discoveredTagClues.insert(1)
-            case "enClue2": discoveredTagClues.insert(2)
-            case "enClue3": discoveredTagClues.insert(3)
-            case "enClue4": discoveredTagClues.insert(4)
+            case "enClue1": nfcScannedClues.insert(1)
+            case "enClue2": nfcScannedClues.insert(2)
+            case "enClue3": nfcScannedClues.insert(3)
+            case "enClue4": nfcScannedClues.insert(4)
             default: break
             }
-            if discoveredTagClues.count == 4 {
+            if nfcScannedClues.count == 4 {
                 finish(.nfc)
             }
         }
@@ -238,6 +236,3 @@ struct ScannerContainerView: View {
         }
     }
 }
-
-
-
