@@ -31,6 +31,7 @@ struct CameraFeedView: View {
     @State private var session = AVCaptureSession()
     @State private var classificationRequest: VNCoreMLRequest?
     @StateObject private var bufferExchange = BufferExchange()
+    @Namespace private var detectionAnimation
 
     private let baseThreshold: VNConfidence = 0.8
     private let specialThreshold: VNConfidence = 0.9
@@ -38,25 +39,12 @@ struct CameraFeedView: View {
 
     var body: some View {
         ZStack {
-            // full-screen camera preview
             CameraPreviewView(session: $session)
                 .ignoresSafeArea()
 
-            // labels overlay
             VStack {
                 Spacer()
-                HStack(spacing: 8) {
-                    ForEach(discovered.keys.sorted(), id: \.self) { label in
-                        Text(label)
-                            .font(.caption)
-                            .foregroundColor(discovered[label]! ? .white : .gray)
-                            .padding(6)
-                            .background(Color.black.opacity(0.5))
-                            .cornerRadius(4)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                detectionLabelsView()
             }
         }
         .onAppear    { configureSession() }
@@ -64,8 +52,97 @@ struct CameraFeedView: View {
         .onReceive(bufferExchange.$pixelBuffer.compactMap { $0 }) { classify(buffer: $0) }
     }
 
+    private func detectionLabelsView() -> some View {
+        let sortedKeys = discovered.keys.sorted()
+
+        return VStack(spacing: 10) {
+            HStack(spacing: 16) {
+                ForEach(sortedKeys.prefix(3), id: \.self) { label in
+                    let index = sortedKeys.firstIndex(of: label)! + 1
+                    detectionItem(label: label, number: index)
+                }
+            }
+
+            HStack(spacing: 16) {
+                ForEach(sortedKeys.dropFirst(3), id: \.self) { label in
+                    let index = sortedKeys.firstIndex(of: label)! + 1
+                    detectionItem(label: label, number: index)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .padding(.bottom, 12)
+    }
+
+    private func detectionItem(label: String, number: Int) -> some View {
+        let isDiscovered = discovered[label] ?? false
+
+        return VStack(spacing: 4) {
+            Text("\(number)")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(.black)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(
+                            isDiscovered
+                                ? LinearGradient(
+                                    colors: [.blue, .cyan],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                  )
+                                : LinearGradient(
+                                    colors: [.gray.opacity(0.3), .gray.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                  )
+                        )
+                        .overlay(
+                            Circle()
+                                .stroke(
+                                    isDiscovered
+                                        ? Color.white.opacity(0.3)
+                                        : Color.gray.opacity(0.2),
+                                    lineWidth: 1
+                                )
+                        )
+                )
+                .scaleEffect(isDiscovered ? 1.2 : 1.0)
+                .rotationEffect(.degrees(isDiscovered ? 360 : 0))
+                .animation(
+                    .spring(response: 0.6, dampingFraction: 0.7)
+                        .delay(Double(number) * 0.05),
+                    value: isDiscovered
+                )
+                .shadow(
+                    color: isDiscovered ? Color.blue.opacity(0.6) : .clear,
+                    radius: isDiscovered ? 6 : 0,
+                    x: 0,
+                    y: 0
+                )
+
+            Text(label)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(width: 52)
+        .matchedGeometryEffect(id: label, in: detectionAnimation)
+    }
+
     private func configureSession() {
-        // 1) Enumerate all back-facing video devices
         let discovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: [
                 .builtInDualCamera,
@@ -77,12 +154,7 @@ struct CameraFeedView: View {
             mediaType: .video,
             position: .back
         )
-        print("Available back cameras:")
-        discovery.devices.forEach { dev in
-            print("• \(dev.localizedName) — type: \(dev.deviceType.rawValue)")
-        }
 
-        // 2) Pick the first available in our preferred order
         let preferredOrder: [AVCaptureDevice.DeviceType] = [
             .builtInDualCamera,
             .builtInTripleCamera,
@@ -94,15 +166,8 @@ struct CameraFeedView: View {
             discovery.devices.first(where: { $0.deviceType == type })
         }.first ?? discovery.devices.first
 
-        guard let device = chosenDevice else {
-            print("No back camera found!")
-            return
-        }
+        guard let device = chosenDevice else { return }
 
-        // 3) Print which one we’re using
-        print(" Using camera: \(device.localizedName) — type: \(device.deviceType.rawValue)")
-
-        // 4) Enable continuous autofocus & auto-exposure
         do {
             try device.lockForConfiguration()
             if device.isFocusModeSupported(.continuousAutoFocus) {
@@ -113,10 +178,9 @@ struct CameraFeedView: View {
             }
             device.unlockForConfiguration()
         } catch {
-            print(" Failed to configure focus/exposure: \(error)")
+            print("Failed to configure focus/exposure: \(error)")
         }
 
-        // 5) Build session with high-res photo preset
         session.beginConfiguration()
         session.sessionPreset = .photo
 
@@ -126,7 +190,7 @@ struct CameraFeedView: View {
                 session.addInput(input)
             }
         } catch {
-            print(" Failed to add camera input: \(error)")
+            print("Failed to add camera input: \(error)")
         }
 
         let output = AVCaptureVideoDataOutput()
@@ -139,7 +203,6 @@ struct CameraFeedView: View {
         }
         session.commitConfiguration()
 
-        // 6) Prepare Vision model
         if let model = try? VNCoreMLModel(for: PoltekImagesClassification_1().model) {
             classificationRequest = VNCoreMLRequest(model: model) { request, _ in
                 guard
@@ -151,15 +214,19 @@ struct CameraFeedView: View {
                 let confidence = best.confidence
                 let threshold: VNConfidence =
                     (label == "Ezlink" || label == "Tukang parkir pink")
-                    ? specialThreshold
-                    : baseThreshold
+                        ? specialThreshold
+                        : baseThreshold
 
                 if confidence >= threshold {
                     detectionCounters[label, default: 0] += 1
                     if detectionCounters[label]! >= requiredConsecutiveFrames,
                        discovered[label] == false {
-                        discovered[label] = true
-                        checkCompletion()
+                        DispatchQueue.main.async {
+                            withAnimation {
+                                discovered[label] = true
+                            }
+                            checkCompletion()
+                        }
                     }
                 } else {
                     detectionCounters[label] = 0
@@ -190,7 +257,6 @@ struct CameraFeedView: View {
     }
 }
 
-// Helper to bridge sample buffers
 private class BufferExchange: NSObject,
                                ObservableObject,
                                AVCaptureVideoDataOutputSampleBufferDelegate {
@@ -205,7 +271,6 @@ private class BufferExchange: NSObject,
     }
 }
 
-// SwiftUI wrapper for AVCaptureVideoPreviewLayer
 struct CameraPreviewView: UIViewRepresentable {
     @Binding var session: AVCaptureSession
 

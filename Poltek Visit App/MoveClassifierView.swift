@@ -1,25 +1,24 @@
-
 import SwiftUI
 
 struct MoveClassifierView: View {
     @StateObject private var vm = ActionClassifierViewModel()
+    @Namespace private var moveAnimation
 
     /// Tracks whether SG and ID have been detected
     @State private var detectedSG = false
     @State private var detectedID = false
 
-    /// Called when both SG and ID are detected (or “Done” tapped)
+    /// Called when both SG and ID are detected
     var onDone: () -> Void
     var onBack: () -> Void
 
     var body: some View {
         ZStack {
-            // Camera preview full‑screen
-            if let uiImage = vm.previewImage {
-                Image(uiImage: uiImage)
+            // MARK: – Background camera feed
+            if let image = vm.previewImage {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-                    // Front‑camera upright rotation
                     .rotationEffect(vm.isUsingFrontCamera ? .degrees(180) : .degrees(0))
                     .ignoresSafeArea()
             } else {
@@ -27,88 +26,43 @@ struct MoveClassifierView: View {
             }
 
             VStack {
-                Spacer()
-
-                // MARK: Action labels
+                // MARK: – Centered classification box under notch
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
+                    Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(vm.actionLabel)
-                            .font(.headline)
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(.white)
                         Text(vm.confidenceLabel)
                             .font(.subheadline)
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .padding(8)
-                    .background(Color.black.opacity(0.5))
-                    .cornerRadius(10)
-
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(.white.opacity(0.1), lineWidth: 1)
+                            )
+                    )
                     Spacer()
                 }
-                .padding(.horizontal)
+                .padding(.top, 80) // adjust for notch height
 
-                // MARK: Controls + SG/ID
-                HStack(spacing: 16) {
-                    /*
-                    // Commented out back button
-                    Button(action: {
-                        vm.stop()
-                        onBack()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2)
-                            .foregroundColor(.white)
-                            .padding(8)
-                            .background(Color.black.opacity(0.5))
-                            .clipShape(Circle())
-                    }
-                    */
+                Spacer()
 
-                    /*
-                    // Commented out flip camera button
-                    Button("Flip") {
-                        vm.toggleCamera()
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Color.black.opacity(0.5))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    */
-
-                    // SG / ID indicators
-                    HStack(spacing: 12) {
-                        Text("SG")
-                            .font(.subheadline).bold()
-                            .foregroundColor(detectedSG ? .white : .gray)
-                            .padding(6)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(6)
-                        Text("ID")
-                            .font(.subheadline).bold()
-                            .foregroundColor(detectedID ? .white : .gray)
-                            .padding(6)
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(6)
-                    }
-
+                // MARK: – Centered SG/ID indicators at bottom
+                HStack {
                     Spacer()
-
-                    /*
-                    // Commented out done button
-                    Button("Done") {
-                        vm.stop()
-                        onDone()
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 16)
-                    .background(Color.black.opacity(0.5))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    */
+                    animatedMoveLabels()
+                    Spacer()
                 }
-                .padding([.horizontal, .bottom])
+                .padding(.bottom, 30)
             }
+            .ignoresSafeArea(edges: .bottom)
         }
         .onAppear {
             detectedSG = false
@@ -116,21 +70,131 @@ struct MoveClassifierView: View {
             vm.start()
         }
         .onReceive(vm.$actionLabel) { label in
-            if label == "SG"  { detectedSG = true }
-            if label == "ID"  { detectedID = true }
+            if label == "SG" {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    detectedSG = true
+                }
+            }
+            if label == "ID" {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    detectedID = true
+                }
+            }
             if detectedSG && detectedID {
-                vm.stop()
-                onDone()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    vm.stop()
+                    onDone()
+                }
             }
         }
+    }
+
+    private func animatedMoveLabels() -> some View {
+        HStack(spacing: 24) {
+            moveDetectionItem(
+                label: "SG",
+                fullName: "Singapore",
+                number: 1,
+                isDetected: detectedSG,
+                colors: [.red, .orange]
+            )
+            moveDetectionItem(
+                label: "ID",
+                fullName: "Indonesia",
+                number: 2,
+                isDetected: detectedID,
+                colors: [.blue, .cyan]
+            )
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+
+    private func moveDetectionItem(
+        label: String,
+        fullName: String,
+        number: Int,
+        isDetected: Bool,
+        colors: [Color]
+    ) -> some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(
+                        isDetected
+                        ? LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [.gray.opacity(0.3), .gray.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .frame(width: 50, height: 50)
+
+                if vm.actionLabel == label && !isDetected {
+                    Circle()
+                        .stroke(colors.first!, lineWidth: 2)
+                        .frame(width: 50, height: 50)
+                        .scaleEffect(1.3)
+                        .opacity(0.6)
+                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: vm.actionLabel)
+                }
+
+                Text("\(number)")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(isDetected ? .black : .white)
+            }
+            .scaleEffect(isDetected ? 1.2 : vm.actionLabel == label ? 1.1 : 1)
+            .rotationEffect(.degrees(isDetected ? 360 : 0))
+            .shadow(
+                color: isDetected
+                    ? colors.first!.opacity(0.6)
+                    : vm.actionLabel == label
+                        ? colors.first!.opacity(0.3)
+                        : .clear,
+                radius: isDetected ? 10 : vm.actionLabel == label ? 5 : 0
+            )
+
+            VStack(spacing: 4) {
+                Text(label)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                Text(fullName)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(
+                        isDetected
+                        ? colors.first!
+                        : vm.actionLabel == label
+                            ? .yellow.opacity(0.7)
+                            : .gray.opacity(0.3)
+                    )
+                    .frame(width: 60, height: 4)
+
+                Text(isDetected ? "✓ Done" : (vm.actionLabel == label ? "Detecting..." : "Waiting"))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.white)
+            }
+        }
+        .frame(width: 100)
+        .matchedGeometryEffect(id: label, in: moveAnimation)
+        .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(Double(number) * 0.1), value: isDetected)
+        .animation(.easeInOut(duration: 0.3), value: vm.actionLabel == label)
     }
 }
 
 struct MoveClassifierView_Previews: PreviewProvider {
     static var previews: some View {
-        MoveClassifierView(
-            onDone: {},
-            onBack: {}
-        )
+        MoveClassifierView(onDone: {}, onBack: {})
     }
 }

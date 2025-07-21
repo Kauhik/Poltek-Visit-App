@@ -15,6 +15,7 @@ public enum SoundIdentifier: String, CaseIterable {
     case doorsClosing     = "SMRT Doors Closing"
     case pedestrianButton = "Singapore Pedestrian Crossing Button"
     case wallKeliling     = "Suara Es Krim Wall's Keliling"
+    
     public var displayName: String { rawValue }
 }
 
@@ -38,37 +39,37 @@ public class ListenDetectionManager: ObservableObject {
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
         classifier?.stop()
         classifier = nil
-        let new = SystemAudioClassifier()
-        new.delegate = self
-        classifier = new
-        new.start()
+        let newClassifier = SystemAudioClassifier()
+        newClassifier.delegate = self
+        classifier = newClassifier
+        newClassifier.start()
     }
 }
 
 extension ListenDetectionManager: AudioClassificationDelegate {
     public func classificationDidUpdate(label: String, confidence: Double) {
-        guard
-            confidence >= detectionThreshold,
-            let id = SoundIdentifier(rawValue: label),
-            let idx = detectionStates.firstIndex(where: { $0.0 == id })
+        guard confidence >= detectionThreshold,
+              let id = SoundIdentifier(rawValue: label),
+              let idx = detectionStates.firstIndex(where: { $0.0 == id })
         else { return }
 
         DispatchQueue.main.async {
-            self.detectionStates[idx].1.currentConfidence = 1.0
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                self.detectionStates[idx].1.currentConfidence = 1.0
+            }
         }
     }
 }
 
-/// The SwiftUI view showing mic icon, 4 bars, and “Next” button.
+/// The SwiftUI view showing mic icon, 4 items, and auto‑advance after detection.
 public struct ListenDetectionView: View {
     @StateObject private var manager = ListenDetectionManager()
+    @Namespace private var audioAnimation
 
     /// Called after the 1 second buffer once all four detect.
     public var onAllDetected: () -> Void
     /// Manual override
     public var onNext: () -> Void
-
-    /// Tracks whether we’ve already scheduled the auto-advance
     @State private var didScheduleAdvance = false
 
     public init(
@@ -80,39 +81,38 @@ public struct ListenDetectionView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 24) {
-            Image(systemName: "waveform.circle")
-                .font(.system(size: 80))
-            Text("Listening to audio")
-                .foregroundColor(.white)
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-            HStack(spacing: 16) {
-                ForEach(manager.detectionStates, id: \.0) { id, state in
-                    VStack(spacing: 8) {
-                        ProgressView(value: state.currentConfidence)
-                            .progressViewStyle(.linear)
-                            .frame(height: 6)
-                            .tint(.white)
-                        Text(id.displayName)
-                            .font(.caption)
-                            .multilineTextAlignment(.center)
-                            .foregroundColor(.white)
-                    }
-                    .frame(width: 70)
-                }
+            VStack(spacing: 32) {
+                Spacer()
+
+                Image(systemName: "waveform.circle.fill")
+                    .foregroundColor(.white)
+                    .font(.system(size: 80))
+                    .scaleEffect(manager.detectionStates.contains { $0.1.currentConfidence >= 1.0 } ? 1.1 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                        value: manager.detectionStates.map { $0.1.currentConfidence }
+                    )
+
+                Text("Listening for sounds")
+                    .font(.title)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                animatedAudioLabels()
+
+                Spacer()
             }
-
-            Button("Next") { onNext() }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
         }
-        .padding(.horizontal, 16)
         .onAppear {
             didScheduleAdvance = false
             manager.restart()
         }
         .onReceive(manager.$detectionStates) { states in
-            // once all four are 1.0, schedule exactly once
             guard !didScheduleAdvance,
                   states.allSatisfy({ $0.1.currentConfidence >= 1.0 })
             else { return }
@@ -122,5 +122,114 @@ public struct ListenDetectionView: View {
                 onAllDetected()
             }
         }
+    }
+
+    private func animatedAudioLabels() -> some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 20) {
+                ForEach(Array(manager.detectionStates.prefix(2).enumerated()), id: \.element.0) { index, item in
+                    audioDetectionItem(
+                        identifier: item.0,
+                        state: item.1,
+                        number: index + 1
+                    )
+                }
+            }
+            HStack(spacing: 20) {
+                ForEach(Array(manager.detectionStates.dropFirst(2).enumerated()), id: \.element.0) { index, item in
+                    audioDetectionItem(
+                        identifier: item.0,
+                        state: item.1,
+                        number: index + 3
+                    )
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 20)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 16)
+    }
+
+    private func audioDetectionItem(
+        identifier: SoundIdentifier,
+        state: DetectionState,
+        number: Int
+    ) -> some View {
+        let isDetected = state.currentConfidence >= 1.0
+        let isListening = state.currentConfidence > 0 && state.currentConfidence < 1.0
+
+        return VStack(spacing: 12) {  // increased spacing here
+            ZStack {
+                Circle()
+                    .fill(
+                        isDetected
+                        ? LinearGradient(colors: [Color.purple, Color.pink],
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing)
+                        : isListening
+                        ? LinearGradient(colors: [Color.orange.opacity(0.7), Color.yellow.opacity(0.7)],
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.1)],
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing)
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                isDetected ? Color.white.opacity(0.3)
+                                : isListening ? Color.orange.opacity(0.5)
+                                : Color.gray.opacity(0.2),
+                                lineWidth: 1
+                            )
+                    )
+                    .frame(width: 44, height: 44)
+
+                if isListening {
+                    Circle()
+                        .stroke(Color.orange, lineWidth: 2)
+                        .frame(width: 44, height: 44)
+                        .scaleEffect(1.2)
+                        .opacity(0.6)
+                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isListening)
+                }
+
+                Text("\(number)")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(isDetected ? .black : .white)
+            }
+            .frame(width: 80)
+
+            Text(identifier.displayName)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .lineSpacing(6)        // add line spacing
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !isDetected {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(isListening ? Color.orange.opacity(0.3) : Color.gray.opacity(0.2))
+                    .frame(width: 60, height: 3)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(isListening ? Color.orange : .clear)
+                            .frame(width: 60 * state.currentConfidence, height: 3),
+                        alignment: .leading
+                    )
+            }
+        }
+        .matchedGeometryEffect(id: identifier, in: audioAnimation)
+        .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(Double(number) * 0.1),
+                   value: isDetected)
+        .animation(.easeInOut(duration: 0.3), value: isListening)
     }
 }
