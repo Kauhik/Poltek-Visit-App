@@ -73,7 +73,6 @@ class DailyFoodData: ObservableObject {
                     let w = cols[0].trimmingCharacters(in: .whitespacesAndNewlines)
                     if !w.isEmpty {
                         tmp.append(.init(id: nextId, word: w, origin: originA))
-                        print(" [DailyFoodData] #\(nextId):", w, "(\(originA))")
                         nextId += 1
                     }
                 }
@@ -82,7 +81,6 @@ class DailyFoodData: ObservableObject {
                     let w2 = cols[1].trimmingCharacters(in: .whitespacesAndNewlines)
                     if !w2.isEmpty {
                         tmp.append(.init(id: nextId, word: w2, origin: originB))
-                        print(" [DailyFoodData] #\(nextId):", w2, "(\(originB))")
                         nextId += 1
                     }
                 }

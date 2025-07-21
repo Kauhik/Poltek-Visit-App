@@ -6,18 +6,21 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct DailyFoodPuzzleView: View {
-    /// Called once all entries are placed correctly
+    /// Called once the user has 5 correct answers
     var onComplete: () -> Void
     /// Called when the Back button is tapped
     var onBack: () -> Void
 
     @StateObject private var data = DailyFoodData()
     @State private var items: [DailyFoodPair] = []
-    @State private var pool: [DailyFoodPair] = []
-    @State private var results: [Int: Bool] = [:]
+    @State private var currentIndex = 0
+    @State private var selection: String? = nil
+    @State private var correctCount = 0
+
+    // Number of correct answers required to finish
+    private let requiredCorrect = 5
 
     var body: some View {
         NavigationStack {
@@ -33,13 +36,13 @@ struct DailyFoodPuzzleView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    // Title section
+                    // Title
                     VStack(spacing: 8) {
                         Text("Daily Food")
                             .font(.largeTitle)
                             .bold()
                             .multilineTextAlignment(.center)
-                        Text("Drag each food onto its origin")
+                        Text("Select the country of origin")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -47,149 +50,127 @@ struct DailyFoodPuzzleView: View {
                     .padding(.top, 32)
                     .padding(.horizontal)
 
-                    // Draggable items and drop zones
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 24) {
-                            VStack(spacing: 12) {
-                                ForEach(items) { pair in
-                                    Text(pair.word)
-                                        .frame(maxWidth: .infinity)
-                                        .padding()
-                                        .background(backgroundColor(for: pair.id))
-                                        .cornerRadius(8)
-                                        .opacity(results[pair.id] == true ? 0.5 : 1)
-                                        .disabled(results[pair.id] == true)
-                                        .onDrag {
-                                            NSItemProvider(object: "\(pair.id)" as NSString)
-                                        }
-                                }
-                            }
+                    Spacer()
 
-                            VStack(spacing: 24) {
-                                dropZone(country: "Singapore")
-                                dropZone(country: "Indonesia")
+                    // Once enough correct answers → complete
+                    if correctCount >= requiredCorrect {
+                        Color.clear
+                            .onAppear { onComplete() }
+
+                    // Show next food image
+                    } else if currentIndex < items.count {
+                        let pair = items[currentIndex]
+
+                        Image(pair.word)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 350, height: 300)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding()
+
+                        HStack(spacing: 40) {
+                            ForEach(["Singapore", "Indonesia"], id: \.self) { country in
+                                Button {
+                                    guard selection == nil else { return }
+                                    selection = country
+                                    if country == pair.origin {
+                                        correctCount += 1
+                                    }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        if correctCount >= requiredCorrect {
+                                            onComplete()
+                                        } else {
+                                            currentIndex += 1
+                                            selection = nil
+                                        }
+                                    }
+                                } label: {
+                                    Text(flagEmoji(for: country))
+                                        .font(.system(size: 50))
+                                        .frame(width: 80, height: 80)
+                                        .background(backgroundColor(for: country))
+                                        .clipShape(Circle())
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.orange, lineWidth: 1)
+                                        )
+                                }
+                                .disabled(selection != nil)
                             }
-                            .frame(maxWidth: 150)
+                        }
+
+                    // Out of items & not enough correct → retry
+                    } else {
+                        VStack(spacing: 16) {
+                            Text("You got \(correctCount) / \(items.count) correct.\nTry again!")
+                                .multilineTextAlignment(.center)
+                            Button("Restart") { resetQuiz() }
+                                .buttonStyle(.borderedProminent)
                         }
                         .padding()
-                        .frame(minHeight: 300)
                     }
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding(.horizontal)
 
                     Spacer()
                 }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Back", action: onBack)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Back", action: onBack)
+                    }
                 }
-            }
-            .onReceive(data.$pairs) { all in
-                // Filter to valid origins
-                let filtered = all.filter { ["Singapore", "Indonesia"].contains($0.origin) }
-                guard filtered.count >= 8 else {
-                    // If fewer than 8 available, show all
-                    items = filtered
-                    pool = []
-                    results = [:]
-                    return
+                .onReceive(data.$pairs) { all in
+                    startQuiz(with: all)
                 }
-                // Select 8 items, ensuring both origins present
-                var chosen: [DailyFoodPair]
-                repeat {
-                    chosen = Array(filtered.shuffled().prefix(8))
-                } while !(
-                    chosen.contains(where: { $0.origin == "Singapore" }) &&
-                    chosen.contains(where: { $0.origin == "Indonesia" })
-                )
-                items = chosen
-                pool = filtered.filter { p in !chosen.contains(where: { $0.id == p.id }) }
-                results = [:]
             }
         }
     }
 
-    private func backgroundColor(for id: Int) -> Color {
-        if let ok = results[id] {
-            return ok
+    // MARK: - Helpers
+
+    private func flagEmoji(for country: String) -> String {
+        switch country {
+        case "Singapore": return "🇸🇬"
+        case "Indonesia": return "🇮🇩"
+        default:          return "❓"
+        }
+    }
+
+    private func backgroundColor(for country: String) -> Color {
+        guard let sel = selection else { return Color.white }
+        if sel == country {
+            return sel == items[currentIndex].origin
                 ? Color.green.opacity(0.5)
                 : Color.red.opacity(0.5)
         }
         return Color.white
     }
 
-    @ViewBuilder
-    private func dropZone(country: String) -> some View {
-        VStack {
-            Text(country)
-                .font(.headline)
-            Rectangle()
-                .fill(Color.orange.opacity(0.1))
-                .frame(width: 100, height: 120)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange, lineWidth: 1)
-                )
-                .onDrop(of: [UTType.plainText], isTargeted: nil) { providers in
-                    handleDrop(providers, onto: country)
-                }
+    private func startQuiz(with all: [DailyFoodPair]) {
+        let filtered = all.filter { ["Singapore", "Indonesia"].contains($0.origin) }
+        guard filtered.count >= 8 else {
+            items = filtered
+            return
         }
+        var chosen: [DailyFoodPair]
+        repeat {
+            chosen = Array(filtered.shuffled().prefix(8))
+        } while !(
+            chosen.contains(where: { $0.origin == "Singapore" }) &&
+            chosen.contains(where: { $0.origin == "Indonesia" })
+        )
+        items = chosen
+        currentIndex = 0
+        selection = nil
+        correctCount = 0
     }
 
-    private func handleDrop(
-        _ providers: [NSItemProvider],
-        onto country: String
-    ) -> Bool {
-        guard let prov = providers.first else { return false }
-        prov.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { data, _ in
-            guard
-                let d = data as? Data,
-                let str = String(data: d, encoding: .utf8),
-                let id = Int(str),
-                let pair = items.first(where: { $0.id == id })
-            else { return }
-
-            let correct = (pair.origin == country)
-            DispatchQueue.main.async {
-                if correct {
-                    results[id] = true
-                    // Check if all placed correctly
-                    if results.count == items.count,
-                       results.values.allSatisfy({ $0 }) {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            onComplete()
-                        }
-                    }
-                } else {
-                    // Wrong drop: mark and replace with animation
-                    results[id] = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        withAnimation(.easeInOut) {
-                            if let index = items.firstIndex(where: { $0.id == id }),
-                               let replacement = pool.randomElement() {
-                                let old = items[index]
-                                items[index] = replacement
-                                pool.removeAll(where: { $0.id == replacement.id })
-                                pool.append(old)
-                                results.removeValue(forKey: id)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return true
+    private func resetQuiz() {
+        startQuiz(with: data.pairs)
     }
 }
 
-
-
-struct DailyFood: PreviewProvider {
+struct DailyFoodPuzzleView_Previews: PreviewProvider {
     static var previews: some View {
-        DailyFoodPuzzleView (onComplete: {}, onBack: {})
+        DailyFoodPuzzleView(onComplete: {}, onBack: {})
             .previewDevice("iPhone 14")
     }
 }
-
