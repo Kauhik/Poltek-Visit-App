@@ -11,14 +11,19 @@ struct CodeView: View {
     let code:      String
     let codeLabel: String
     var onDone:    () -> Void
-
+    
     private let emojis = [
         "🎉","🔒","🔓","✨","🎈",
         "🥳","🎊","🎂","💥","🌟",
-        "🍾","🎇","🎆","🪅","🎀"
-    ]
-    @State private var showEmojis = true
+        "🍾","🎇","🎆","🪅","🎀",
+        "🎉","✨","🌟","🎊","💥",
+        "🎈","🥳","🎇","🎆","🪅",
+        "🎈","🥳","🎇","🎆","🪅"
 
+    ]
+    
+    @State private var showEmojis = true
+    
     var body: some View {
         ZStack {
             LinearGradient(
@@ -30,15 +35,7 @@ struct CodeView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-
-            if showEmojis {
-                ForEach(Array(emojis.enumerated()), id: \.offset) { index, emoji in
-                    ExplodingEmojiView(emoji: emoji,
-                                       delay: Double(index) * 0.15)
-                        .allowsHitTesting(false)
-                }
-            }
-
+            
             VStack(spacing: 32) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
@@ -53,13 +50,14 @@ struct CodeView: View {
                         .frame(height: 250)
                         .padding(.horizontal, 24)
                         .shadow(radius: 10)
-
+                    
                     VStack(spacing: 8) {
                         if !code.isEmpty {
                             Text(code)
                                 .font(.system(size: 120, weight: .bold))
                                 .foregroundColor(.white)
                         }
+                        
                         Text(codeLabel)
                             .font(.system(
                                 size: code.isEmpty ? fortyEightSize : 28,
@@ -70,7 +68,7 @@ struct CodeView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                 }
-
+                
                 Button {
                     onDone()
                 } label: {
@@ -85,6 +83,15 @@ struct CodeView: View {
                 .contentShape(Rectangle())
                 .padding(.horizontal, 40)
             }
+            
+            // Raining emojis on top of everything
+            if showEmojis {
+                ForEach(Array(emojis.enumerated()), id: \.offset) { index, emoji in
+                    RainingEmojiView(emoji: emoji,
+                                     delay: Double(index) * 0.15) // Faster spacing between emojis
+                        .allowsHitTesting(false)
+                }
+            }
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) {
@@ -92,46 +99,43 @@ struct CodeView: View {
             }
         }
     }
-
+    
     private var fortyEightSize: CGFloat { 48 }
 }
 
-/// Individual exploding‑emoji view
-struct ExplodingEmojiView: View {
+/// Individual raining emoji view
+struct RainingEmojiView: View {
     let emoji: String
     let delay: Double
-
-    @State private var x:       CGFloat = 0.5
-    @State private var y:       CGFloat = 0.45
-    @State private var rot:     Double  = 0
-    @State private var scale:   CGFloat = 0.8
+    
+    @State private var x:       CGFloat = CGFloat.random(in: 0.1...0.9) // Random horizontal start position
+    @State private var y:       CGFloat = -0.1 // Start above screen
     @State private var opacity: Double  = 1.0
-
-    private let angle      = Double.random(in: 0..<360) * .pi/180
-    private let radiusNorm = CGFloat.random(in: 0.3...0.7)
-
+    
+    private let horizontalDrift = CGFloat.random(in: -0.1...0.1) // Slight horizontal movement
+    private let fallDuration = Double.random(in: 1.8...3.2) // Faster fall speed
+    
     var body: some View {
         GeometryReader { geo in
             Text(emoji)
-                .font(.system(size: 45))
+                .font(.system(size: 40))
                 .opacity(opacity)
                 .position(
                     x: geo.size.width  * x,
                     y: geo.size.height * y
                 )
-                .rotationEffect(.degrees(rot))
-                .scaleEffect(scale)
                 .onAppear {
-                    let targetX = 0.5 + cos(angle)    * radiusNorm
-                    let targetY = 0.45 + sin(angle)   * radiusNorm
-
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        withAnimation(.easeOut(duration: 3)) {
-                            x       = targetX
-                            y       = targetY
-                            rot     = 720
-                            scale   = 1.5
-                            opacity = 0
+                        withAnimation(.linear(duration: fallDuration)) {
+                            y = 1.1 // Fall below screen
+                            x = x + horizontalDrift // Slight horizontal drift
+                        }
+                        
+                        // Fade out near the bottom
+                        DispatchQueue.main.asyncAfter(deadline: .now() + fallDuration * 0.7) {
+                            withAnimation(.easeOut(duration: fallDuration * 0.3)) {
+                                opacity = 0
+                            }
                         }
                     }
                 }
