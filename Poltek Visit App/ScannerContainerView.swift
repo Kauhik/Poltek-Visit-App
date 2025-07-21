@@ -279,8 +279,10 @@
                         VStack(spacing: 4) {
                             Image(systemName: tab.iconName)
                                 .font(.system(size: 20))
+                                .foregroundColor(selectedTab == tab ? .orange : .gray)
                             Text(tab.label)
                                 .font(.caption2)
+                                .foregroundColor(selectedTab == tab ? .orange : .gray)
                         }
                     }
                     .disabled(completedTabs.contains(tab))
@@ -290,6 +292,7 @@
             }
             .frame(height: 80)
         }
+
     
         enum Tab: String, CaseIterable, Identifiable {
             case qr, scan, listen, move, nfc
