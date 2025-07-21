@@ -19,7 +19,6 @@ struct CameraFeedView: View {
         "Ezlink": false,
         "Mangkok ayam": false,
         "Merlion": false,
-        "Tukang parkir pink": false,
         "Welcome to Batam": false
     ]
 
@@ -65,24 +64,28 @@ struct CameraFeedView: View {
 
                 Spacer()
 
-                // Capture button - above the clues box
-                Button("Capture") {
+                // Capture button – full rectangle is now tappable
+                Button(action: {
                     if let buffer = bufferExchange.pixelBuffer {
                         classify(buffer: buffer)
                     }
-                }
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundColor(.black)
-                .frame(height: 56)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(.ultraThinMaterial)
-                        .overlay(
+                }) {
+                    Text("Capture")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.black)
+                        .frame(height: 56)
+                        .frame(maxWidth: .infinity)
+                        .background(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                )
                         )
-                )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(Rectangle())
                 .animation(.easeInOut(duration: 0.1), value: showToast)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
@@ -157,7 +160,7 @@ struct CameraFeedView: View {
                 .scaleEffect(done ? 1.2 : 1.0)
                 .rotationEffect(.degrees(done ? 360 : 0))
                 .animation(.spring(response: 0.6, dampingFraction: 0.7)
-                            .delay(Double(number)*0.05),
+                            .delay(Double(number) * 0.05),
                            value: done)
 
             Text(label)
