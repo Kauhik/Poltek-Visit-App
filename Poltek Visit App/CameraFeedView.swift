@@ -37,7 +37,7 @@ struct CameraFeedView: View {
                 .ignoresSafeArea()
 
             VStack {
-                // Toast on failed match - now larger
+                // Toast on failed match
                 if showToast {
                     HStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -64,7 +64,7 @@ struct CameraFeedView: View {
 
                 Spacer()
 
-                // Capture button – full rectangle is now tappable
+                // Capture button
                 Button(action: {
                     if let buffer = bufferExchange.pixelBuffer {
                         classify(buffer: buffer)
@@ -90,7 +90,7 @@ struct CameraFeedView: View {
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
 
-                // Clue indicators
+                // Clue indicators in a single row of 4
                 detectionLabelsView()
             }
         }
@@ -100,20 +100,11 @@ struct CameraFeedView: View {
 
     private func detectionLabelsView() -> some View {
         let keys = discovered.keys.sorted()
-        return VStack(spacing: 10) {
-            HStack(spacing: 16) {
-                ForEach(keys.prefix(3), id: \.self) { label in
-                    clueItem(label: label,
-                             number: keys.firstIndex(of: label)! + 1)
-                }
+        return HStack(spacing: 16) {
+            ForEach(keys, id: \.self) { label in
+                clueItem(label: label,
+                         number: keys.firstIndex(of: label)! + 1)
             }
-            HStack(spacing: 16) {
-                ForEach(keys.dropFirst(3), id: \.self) { label in
-                    clueItem(label: label,
-                             number: keys.firstIndex(of: label)! + 1)
-                }
-            }
-            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -170,7 +161,7 @@ struct CameraFeedView: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
         }
-        .frame(width: 52)
+        .frame(width: 60)
         .matchedGeometryEffect(id: label, in: detectionAnimation)
     }
 
@@ -224,7 +215,7 @@ struct CameraFeedView: View {
                 let label = top.identifier
                 let conf  = top.confidence
                 let thresh: VNConfidence =
-                    (label == "Ezlink" || label == "Tukang parkir pink")
+                    label == "Ezlink"
                         ? specialThreshold
                         : baseThreshold
 
