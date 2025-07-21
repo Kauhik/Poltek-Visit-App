@@ -12,17 +12,17 @@ import Combine
 final class KeyboardObserver: ObservableObject {
     @Published var height: CGFloat = 0
     private var cancellables = Set<AnyCancellable>()
-
+    
     init() {
         let show = NotificationCenter.default
             .publisher(for: UIResponder.keyboardWillShowNotification)
             .compactMap { $0.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect }
             .map(\.height)
-
+        
         let hide = NotificationCenter.default
             .publisher(for: UIResponder.keyboardWillHideNotification)
             .map { _ in CGFloat(0) }
-
+        
         Publishers.Merge(show, hide)
             .map { $0 * 0.3 }
             .assign(to: \.height, on: self)
@@ -33,17 +33,17 @@ final class KeyboardObserver: ObservableObject {
 struct TeamInputView: View {
     @Binding var teamNumber: String
     var onPlay: () -> Void
-
+    
     @FocusState private var isFocused: Bool
     @StateObject private var keyboard = KeyboardObserver()
     @State private var showToast = false
-
+    
     /// Enable Play as soon as at least one digit is entered
     private var isComplete: Bool { teamNumber.count >= 1 }
-
+    
     /// Valid team number range
     private let validRange = 1...55
-
+    
     var body: some View {
         ZStack {
             Image("Background")
@@ -51,51 +51,51 @@ struct TeamInputView: View {
                 .scaledToFill()
                 .ignoresSafeArea()
                 .onTapGesture { isFocused = false }
-
+            
             GeometryReader { geo in
                 VStack {
                     Spacer(minLength: geo.size.height * 0.1)
-
+                    
                     Image("Logo")
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: geo.size.width * 0.6)
                         .shadow(radius: 4)
-
+                    
                     Spacer().frame(height: 20)
-
+                    
                     // input card + toast
                     VStack(spacing: 12) {
-                        // the input card
                         VStack(spacing: 24) {
                             Text("Enter your group number")
                                 .font(.headline)
-
+                            
                             HStack(spacing: 16) {
                                 DigitCircleView(digit: teamNumber.digit(at: 0))
                                 DigitCircleView(digit: teamNumber.digit(at: 1))
                             }
-
-                            Button("Play") {
-                                // dismiss keyboard immediately
+                            
+                            Button {
                                 isFocused = false
                                 attemptPlay()
+                            } label: {
+                                Text("Play")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color("AccentTeal").opacity(isComplete ? 1 : 0.5))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(30)
                             }
                             .disabled(!isComplete)
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color("AccentTeal").opacity(isComplete ? 1 : 0.5))
-                            .foregroundColor(.white)
-                            .cornerRadius(30)
+                            .contentShape(Rectangle())
                         }
                         .padding(24)
                         .background(.ultraThinMaterial)
                         .cornerRadius(20)
                         .padding(.horizontal, 24)
                         .onTapGesture { isFocused = true }
-
-                        // toast message below the box
+                        
                         if showToast {
                             Text("pls give a valid team number for 1 to 55")
                                 .font(.subheadline)
@@ -113,13 +113,13 @@ struct TeamInputView: View {
                                 }
                         }
                     }
-
+                    
                     Spacer()
                 }
                 .padding(.bottom, keyboard.height)
                 .animation(.easeOut, value: keyboard.height)
             }
-
+            
             // hidden text field to summon the number pad
             TextField("", text: $teamNumber)
                 .keyboardType(.numberPad)
@@ -137,7 +137,7 @@ struct TeamInputView: View {
             }
         }
     }
-
+    
     private func attemptPlay() {
         guard let n = Int(teamNumber),
               validRange.contains(n)

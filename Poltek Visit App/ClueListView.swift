@@ -9,12 +9,12 @@
 import SwiftUI
 
 struct ClueListView: View {
-    let teamNumber:         String
-    let unlockedLetters:    Set<String>
-    let pin:                String        // e.g. "1408"
-    let letterIndices:      [String: Int] // e.g. ["A":2,"B":0,"C":3,"D":1]
-    let combinationUnlocked: Bool
-    var onScan:             () -> Void
+    let teamNumber:            String
+    let unlockedLetters:       Set<String>
+    let pin:                   String
+    let letterIndices:         [String: Int]
+    let combinationUnlocked:   Bool
+    var onScan:               () -> Void
 
     private let allLetters = ["A","B","C","D"]
     private let columns    = [
@@ -41,15 +41,14 @@ struct ClueListView: View {
                     LazyVGrid(columns: columns, spacing: 16) {
                         ForEach(allLetters, id: \.self) { letter in
                             CodeTile(
-                                letter:     letter,
-                                unlocked:   unlockedLetters.contains(letter),
-                                digit:      codeMap[letter] ?? "?"
+                                letter:   letter,
+                                unlocked: unlockedLetters.contains(letter),
+                                digit:    codeMap[letter] ?? "?"
                             )
                         }
                     }
                     .padding(.horizontal, 24)
 
-                    // full‑width “All Codes” tile
                     CodeTile(
                         letter:   combinationUnlocked ? "ABCD" : nil,
                         unlocked: combinationUnlocked,
@@ -70,7 +69,9 @@ struct ClueListView: View {
                     .cornerRadius(20)
                     .padding(.horizontal, 24)
 
-                    Button(action: onScan) {
+                    Button {
+                        onScan()
+                    } label: {
                         Text("Scan Clue")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
@@ -79,6 +80,7 @@ struct ClueListView: View {
                             .foregroundColor(.white)
                             .cornerRadius(30)
                     }
+                    .contentShape(Rectangle())
                     .padding(.horizontal, 24)
                 }
                 .padding(.vertical, 32)
@@ -89,19 +91,17 @@ struct ClueListView: View {
         }
     }
 
-    /// Map each letter → its digit from `pin`, using your randomized `letterIndices`
     private var codeMap: [String:String] {
         var m = [String:String]()
         for letter in allLetters {
             if let idx = letterIndices[letter], idx < pin.count {
-                let char = pin[pin.index(pin.startIndex, offsetBy: idx)]
-                m[letter] = String(char)
+                let c = pin[pin.index(pin.startIndex, offsetBy: idx)]
+                m[letter] = String(c)
             }
         }
         return m
     }
 
-    /// When all four are unlocked, show the combination letters in the order they appear
     private var combinationString: String {
         allLetters
             .sorted { letterIndices[$0]! < letterIndices[$1]! }
@@ -109,12 +109,12 @@ struct ClueListView: View {
     }
 }
 
-
+/// A single “code” tile (A, B, C, D, or “All Codes”)
 struct CodeTile: View {
-    /// "A" / "B" / "C" / "D" or nil for the full‑width “All Codes”
+    /// "A" / "B" / "C" / "D" or nil for the full‑width tile
     let letter:   String?
     let unlocked: Bool
-    let digit:    String?  // e.g. "1" or the full pin "1408"
+    let digit:    String?
 
     var body: some View {
         ZStack {

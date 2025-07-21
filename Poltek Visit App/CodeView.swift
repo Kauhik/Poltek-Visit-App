@@ -8,14 +8,14 @@
 import SwiftUI
 
 struct CodeView: View {
-    let code: String
+    let code:      String
     let codeLabel: String
-    var onDone: () -> Void
+    var onDone:    () -> Void
 
     private let emojis = [
-        "🎉", "🔒", "🔓", "✨", "🎈",
-        "🥳", "🎊", "🎂", "💥", "🌟",
-        "🍾", "🎇", "🎆", "🪅", "🎀"
+        "🎉","🔒","🔓","✨","🎈",
+        "🥳","🎊","🎂","💥","🌟",
+        "🍾","🎇","🎆","🪅","🎀"
     ]
     @State private var showEmojis = true
 
@@ -33,16 +33,13 @@ struct CodeView: View {
 
             if showEmojis {
                 ForEach(Array(emojis.enumerated()), id: \.offset) { index, emoji in
-                    ExplodingEmojiView(
-                        emoji: emoji,
-                        delay: Double(index) * 0.15
-                    )
-                    .allowsHitTesting(false)
+                    ExplodingEmojiView(emoji: emoji,
+                                       delay: Double(index) * 0.15)
+                        .allowsHitTesting(false)
                 }
             }
 
             VStack(spacing: 32) {
-                // Gradient box
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
                         .fill(
@@ -52,13 +49,11 @@ struct CodeView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        // expand width to 90% of screen and height to 250
                         .frame(maxWidth: .infinity)
                         .frame(height: 250)
                         .padding(.horizontal, 24)
                         .shadow(radius: 10)
 
-                    // Contents
                     VStack(spacing: 8) {
                         if !code.isEmpty {
                             Text(code)
@@ -66,9 +61,8 @@ struct CodeView: View {
                                 .foregroundColor(.white)
                         }
                         Text(codeLabel)
-                            // larger font when it's "Click Done"
                             .font(.system(
-                                size: code.isEmpty ?  fortyEightSize : 28,
+                                size: code.isEmpty ? fortyEightSize : 28,
                                 weight: code.isEmpty ? .bold : .medium
                             ))
                             .foregroundColor(.white)
@@ -77,15 +71,19 @@ struct CodeView: View {
                     .padding(.horizontal, 16)
                 }
 
-                // Done button
-                Button("Done", action: onDone)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.teal)
-                    .foregroundColor(.white)
-                    .cornerRadius(30)
-                    .padding(.horizontal, 40)
+                Button {
+                    onDone()
+                } label: {
+                    Text("Done")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(30)
+                }
+                .contentShape(Rectangle())
+                .padding(.horizontal, 40)
             }
         }
         .onAppear {
@@ -95,21 +93,21 @@ struct CodeView: View {
         }
     }
 
-    // dynamic font-size helper
     private var fortyEightSize: CGFloat { 48 }
 }
 
+/// Individual exploding‑emoji view
 struct ExplodingEmojiView: View {
     let emoji: String
     let delay: Double
 
-    @State private var x: CGFloat = 0.5
-    @State private var y: CGFloat = 0.45
-    @State private var rot: Double = 0.0
-    @State private var scale: CGFloat = 0.8
-    @State private var opacity: Double = 1.0
+    @State private var x:       CGFloat = 0.5
+    @State private var y:       CGFloat = 0.45
+    @State private var rot:     Double  = 0
+    @State private var scale:   CGFloat = 0.8
+    @State private var opacity: Double  = 1.0
 
-    private let angle = Double.random(in: 0..<360) * .pi / 180
+    private let angle      = Double.random(in: 0..<360) * .pi/180
     private let radiusNorm = CGFloat.random(in: 0.3...0.7)
 
     var body: some View {
@@ -118,22 +116,22 @@ struct ExplodingEmojiView: View {
                 .font(.system(size: 45))
                 .opacity(opacity)
                 .position(
-                    x: geo.size.width * x,
+                    x: geo.size.width  * x,
                     y: geo.size.height * y
                 )
                 .rotationEffect(.degrees(rot))
                 .scaleEffect(scale)
                 .onAppear {
-                    let targetX = 0.5 + cos(angle) * radiusNorm
-                    let targetY = 0.45 + sin(angle) * radiusNorm
+                    let targetX = 0.5 + cos(angle)    * radiusNorm
+                    let targetY = 0.45 + sin(angle)   * radiusNorm
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                         withAnimation(.easeOut(duration: 3)) {
-                            x = targetX
-                            y = targetY
-                            rot = 720
-                            scale = 1.5
-                            opacity = 0.0
+                            x       = targetX
+                            y       = targetY
+                            rot     = 720
+                            scale   = 1.5
+                            opacity = 0
                         }
                     }
                 }
