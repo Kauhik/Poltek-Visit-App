@@ -55,7 +55,6 @@ struct DailyFoodPuzzleView: View {
                     // Once enough correct answers → complete
                     if correctCount >= requiredCorrect {
                         Color.clear
-                            .onAppear { onComplete() }
 
                     // Show next food image
                     } else if currentIndex < items.count {
@@ -130,18 +129,18 @@ struct DailyFoodPuzzleView: View {
         switch country {
         case "Singapore": return "🇸🇬"
         case "Indonesia": return "🇮🇩"
-        default:          return "❓"
+        default:          return "?"
         }
     }
 
     private func backgroundColor(for country: String) -> Color {
-        guard let sel = selection else { return Color.white }
+        guard let sel = selection else { return .white }
         if sel == country {
             return sel == items[currentIndex].origin
                 ? Color.green.opacity(0.5)
                 : Color.red.opacity(0.5)
         }
-        return Color.white
+        return .white
     }
 
     private func startQuiz(with all: [DailyFoodPair]) {
@@ -171,6 +170,5 @@ struct DailyFoodPuzzleView: View {
 struct DailyFoodPuzzleView_Previews: PreviewProvider {
     static var previews: some View {
         DailyFoodPuzzleView(onComplete: {}, onBack: {})
-            .previewDevice("iPhone 14")
     }
 }
