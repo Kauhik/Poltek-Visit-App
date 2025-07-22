@@ -24,6 +24,9 @@ struct ScannerContainerView: View {
     @StateObject private var tagScanner = TagScanner()
     @Namespace private var clueAnimation
 
+    // MARK: — Persistence key for NFC clues
+    private static let nfcCluesKey = "ScannerContainerView.nfcScannedClues"
+
     private let qrClueURLs = [
         "https://qrs.ly/bkgtv1h",
         "https://qrs.ly/ntgtv2j",
@@ -42,7 +45,20 @@ struct ScannerContainerView: View {
             .navigationBarHidden(true)
             bottomTabBar
         }
-        .onAppear { didFinishCurrent = false }
+        .onAppear {
+            didFinishCurrent = false
+            // Load persisted NFC clues
+            if let data = UserDefaults.standard.data(forKey: Self.nfcCluesKey),
+               let arr = try? JSONDecoder().decode([Int].self, from: data) {
+                nfcScannedClues = Set(arr)
+            }
+        }
+        .onChange(of: nfcScannedClues) { new in
+            // Save NFC clues
+            if let data = try? JSONEncoder().encode(Array(new)) {
+                UserDefaults.standard.set(data, forKey: Self.nfcCluesKey)
+            }
+        }
     }
 
     @ViewBuilder
@@ -66,12 +82,10 @@ struct ScannerContainerView: View {
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                     qrScannedClues.insert(idx + 1)
                 }
-
                 if qrScannedClues.count == qrClueURLs.count {
                     finish(.camera)
                 }
             }
-
             VStack {
                 Spacer()
                 animatedClueLabels(count: qrClueURLs.count,

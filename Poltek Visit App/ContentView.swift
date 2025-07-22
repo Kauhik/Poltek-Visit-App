@@ -274,8 +274,17 @@ struct ContentView: View {
         scannerSelectedTab = .qr
 
         // Clear persisted MoveClassifierView detection flags
-        UserDefaults.standard.removeObject(forKey: "MoveClassifierView.detectedSG")
-        UserDefaults.standard.removeObject(forKey: "MoveClassifierView.detectedID")
+        UserDefaults.standard.removeObject(
+            forKey: "MoveClassifierView.detectedSG"
+        )
+        UserDefaults.standard.removeObject(
+            forKey: "MoveClassifierView.detectedID"
+        )
+
+        // Clear persisted NFC clues
+        UserDefaults.standard.removeObject(
+            forKey: "ScannerContainerView.nfcScannedClues"
+        )
     }
 
     private func advanceUnlock() {
