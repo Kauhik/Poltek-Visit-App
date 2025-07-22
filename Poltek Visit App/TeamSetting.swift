@@ -24,8 +24,14 @@ final class TeamSetting {
     /// Whether the full combination (ABCD) has been unlocked
     var combinationUnlocked: Bool
 
-    /// The random mapping from letter → index (persisted so it never reshuffles)
+    /// The random mapping from letter → index
     var letterIndices: [String: Int]
+
+    /// Which NFC clues (1…4) have been found
+    var nfcClues: [Int]
+
+    /// Which listen (microphone) clues (1…4) have been found
+    var listenClues: [Int]
 
     init(
         teamNumber: String = "",
@@ -33,7 +39,9 @@ final class TeamSetting {
         completedTabs: [String] = [],
         unlockedLetters: [String] = [],
         combinationUnlocked: Bool = false,
-        letterIndices: [String: Int] = [:]
+        letterIndices: [String: Int] = [:],
+        nfcClues: [Int] = [],
+        listenClues: [Int] = []
     ) {
         self.teamNumber = teamNumber
         self.qrClues = qrClues
@@ -41,5 +49,7 @@ final class TeamSetting {
         self.unlockedLetters = unlockedLetters
         self.combinationUnlocked = combinationUnlocked
         self.letterIndices = letterIndices
+        self.nfcClues = nfcClues
+        self.listenClues = listenClues
     }
 }

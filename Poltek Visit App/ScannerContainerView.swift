@@ -5,7 +5,6 @@
     //  Created by Kaushik Manian on 5/7/25.
     //
 
-
 import SwiftUI
 import AVFoundation
 import CoreNFC
@@ -13,8 +12,9 @@ import CoreNFC
 struct ScannerContainerView: View {
     @Binding var selectedTab: Tab
     @Binding var completedTabs: Set<Tab>
-    @Binding var qrScannedClues: Set<Int>       // <-- added
+    @Binding var qrScannedClues: Set<Int>
     @Binding var nfcScannedClues: Set<Int>
+    @Binding var listenScannedClues: Set<Int>
     let usageLeft: [ScanTech: Int]
     var onBack: () -> Void
     var onNext: (ScanTech) -> Void
@@ -74,73 +74,10 @@ struct ScannerContainerView: View {
 
             VStack {
                 Spacer()
-                animatedClueLabels(count: qrClueURLs.count, lit: qrScannedClues)
+                animatedClueLabels(count: qrClueURLs.count,
+                                   lit: qrScannedClues)
             }
         }
-    }
-
-    private func animatedClueLabels(count: Int, lit: Set<Int>) -> some View {
-        HStack(spacing: 16) {
-            ForEach(1...count, id: \.self) { idx in
-                VStack(spacing: 4) {
-                    Text("\(idx)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundColor(lit.contains(idx) ? .black : .white)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(
-                                    lit.contains(idx)
-                                    ? LinearGradient(
-                                        colors: [.green, .mint],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                    : LinearGradient(
-                                        colors: [.gray.opacity(0.3), .gray.opacity(0.1)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(
-                                            lit.contains(idx) ? .white.opacity(0.3) : .gray.opacity(0.2),
-                                            lineWidth: 1
-                                        )
-                                )
-                        )
-                        .scaleEffect(lit.contains(idx) ? 1.2 : 1.0)
-                        .rotationEffect(.degrees(lit.contains(idx) ? 360 : 0))
-                        .shadow(
-                            color: lit.contains(idx) ? .green.opacity(0.6) : .clear,
-                            radius: lit.contains(idx) ? 8 : 0
-                        )
-
-                    Text("Clue")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(lit.contains(idx) ? .green : .gray)
-                        .opacity(lit.contains(idx) ? 1.0 : 0.6)
-                }
-                .matchedGeometryEffect(id: idx, in: clueAnimation)
-                .animation(
-                    .spring(response: 0.8, dampingFraction: 0.6)
-                    .delay(Double(idx) * 0.1),
-                    value: lit.contains(idx)
-                )
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(.white.opacity(0.1), lineWidth: 1)
-                )
-        )
-        .padding(.bottom, 20)
     }
 
     private var scanView: some View {
@@ -152,6 +89,7 @@ struct ScannerContainerView: View {
 
     private var listenView: some View {
         ListenDetectionView(
+            detectedClues: $listenScannedClues,
             onAllDetected: { finish(.microphone) },
             onNext:        { finish(.microphone) }
         )
@@ -207,6 +145,69 @@ struct ScannerContainerView: View {
                 finish(.nfc)
             }
         }
+    }
+
+    private func animatedClueLabels(count: Int, lit: Set<Int>) -> some View {
+        HStack(spacing: 16) {
+            ForEach(1...count, id: \.self) { idx in
+                VStack(spacing: 4) {
+                    Text("\(idx)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(lit.contains(idx) ? .black : .white)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .fill(
+                                    lit.contains(idx)
+                                        ? LinearGradient(colors: [.green, .mint],
+                                                         startPoint: .topLeading,
+                                                         endPoint: .bottomTrailing)
+                                        : LinearGradient(colors: [.gray.opacity(0.3),
+                                                                  .gray.opacity(0.1)],
+                                                         startPoint: .topLeading,
+                                                         endPoint: .bottomTrailing)
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(
+                                            lit.contains(idx)
+                                                ? .white.opacity(0.3)
+                                                : .gray.opacity(0.2),
+                                            lineWidth: 1
+                                        )
+                                )
+                        )
+                        .scaleEffect(lit.contains(idx) ? 1.2 : 1.0)
+                        .rotationEffect(.degrees(lit.contains(idx) ? 360 : 0))
+                        .shadow(
+                            color: lit.contains(idx) ? .green.opacity(0.6) : .clear,
+                            radius: lit.contains(idx) ? 8 : 0
+                        )
+
+                    Text("Clue")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(lit.contains(idx) ? .green : .gray)
+                        .opacity(lit.contains(idx) ? 1.0 : 0.6)
+                }
+                .matchedGeometryEffect(id: idx, in: clueAnimation)
+                .animation(
+                    .spring(response: 0.8, dampingFraction: 0.6)
+                        .delay(Double(idx) * 0.1),
+                    value: lit.contains(idx)
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+        .padding(.bottom, 20)
     }
 
     private func animateNFC(_ idx: Int) {

@@ -15,7 +15,7 @@ public enum SoundIdentifier: String, CaseIterable {
     case doorsClosing     = "SMRT Doors Closing"
     case pedestrianButton = "Singapore Pedestrian Crossing Button"
     case wallKeliling     = "Suara Es Krim Wall's Keliling"
-    
+
     public var displayName: String { rawValue }
 }
 
@@ -32,10 +32,11 @@ public class ListenDetectionManager: ObservableObject {
 
     public init() {
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
-        restart()
     }
 
-    public func restart() {
+    /// Only start listening once; call this explicitly.
+    public func startListening() {
+        // reset states if you really need a fresh start:
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
         classifier?.stop()
         classifier = nil
@@ -61,21 +62,26 @@ extension ListenDetectionManager: AudioClassificationDelegate {
     }
 }
 
-/// The SwiftUI view showing mic icon, 4 items, and auto‑advance after detection.
+/// The SwiftUI view showing mic icon, 4 items, and auto-advance after detection.
 public struct ListenDetectionView: View {
+    @Binding var detectedClues: Set<Int>
     @StateObject private var manager = ListenDetectionManager()
     @Namespace private var audioAnimation
 
-    /// Called after the 1 second buffer once all four detect.
+    /// Called after the 1 second buffer once all detect.
     public var onAllDetected: () -> Void
     /// Manual override
     public var onNext: () -> Void
+
     @State private var didScheduleAdvance = false
+    @State private var didSetup = false
 
     public init(
+        detectedClues: Binding<Set<Int>>,
         onAllDetected: @escaping () -> Void,
         onNext: @escaping () -> Void
     ) {
+        self._detectedClues = detectedClues
         self.onAllDetected = onAllDetected
         self.onNext = onNext
     }
@@ -90,7 +96,10 @@ public struct ListenDetectionView: View {
                 Image(systemName: "waveform.circle.fill")
                     .foregroundColor(.white)
                     .font(.system(size: 80))
-                    .scaleEffect(manager.detectionStates.contains { $0.1.currentConfidence >= 1.0 } ? 1.1 : 1.0)
+                    .scaleEffect(
+                        manager.detectionStates.contains { $0.1.currentConfidence >= 1.0 }
+                        ? 1.1 : 1.0
+                    )
                     .animation(
                         .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
                         value: manager.detectionStates.map { $0.1.currentConfidence }
@@ -109,16 +118,33 @@ public struct ListenDetectionView: View {
             }
         }
         .onAppear {
+            // only set up once
+            guard !didSetup else { return }
+            didSetup = true
+            manager.startListening()
+            // replay any previously detected clues into the UI
+            for idx in detectedClues {
+                let pos = idx - 1
+                if manager.detectionStates.indices.contains(pos) {
+                    manager.detectionStates[pos].1.currentConfidence = 1.0
+                }
+            }
             didScheduleAdvance = false
-            manager.restart()
         }
         .onReceive(manager.$detectionStates) { states in
+            // mark each newly detected sound
+            for (idx, item) in states.enumerated() {
+                if item.1.currentConfidence >= 1.0 {
+                    detectedClues.insert(idx + 1)
+                }
+            }
+            // once all four have fired
             guard !didScheduleAdvance,
                   states.allSatisfy({ $0.1.currentConfidence >= 1.0 })
             else { return }
 
             didScheduleAdvance = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 onAllDetected()
             }
         }
@@ -127,21 +153,17 @@ public struct ListenDetectionView: View {
     private func animatedAudioLabels() -> some View {
         VStack(spacing: 16) {
             HStack(spacing: 20) {
-                ForEach(Array(manager.detectionStates.prefix(2).enumerated()), id: \.element.0) { index, item in
-                    audioDetectionItem(
-                        identifier: item.0,
-                        state: item.1,
-                        number: index + 1
-                    )
+                ForEach(Array(manager.detectionStates.prefix(2).enumerated()), id: \.element.0) { index, pair in
+                    audioDetectionItem(identifier: index,
+                                       state: pair.1,
+                                       number: index + 1)
                 }
             }
             HStack(spacing: 20) {
-                ForEach(Array(manager.detectionStates.dropFirst(2).enumerated()), id: \.element.0) { index, item in
-                    audioDetectionItem(
-                        identifier: item.0,
-                        state: item.1,
-                        number: index + 3
-                    )
+                ForEach(Array(manager.detectionStates.dropFirst(2).enumerated()), id: \.element.0) { index, pair in
+                    audioDetectionItem(identifier: index + 2,
+                                       state: pair.1,
+                                       number: index + 3)
                 }
             }
         }
@@ -159,14 +181,14 @@ public struct ListenDetectionView: View {
     }
 
     private func audioDetectionItem(
-        identifier: SoundIdentifier,
+        identifier: Int,
         state: DetectionState,
         number: Int
     ) -> some View {
-        let isDetected = state.currentConfidence >= 1.0
+        let isDetected  = state.currentConfidence >= 1.0
         let isListening = state.currentConfidence > 0 && state.currentConfidence < 1.0
 
-        return VStack(spacing: 12) {  // increased spacing here
+        return VStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(
@@ -199,7 +221,8 @@ public struct ListenDetectionView: View {
                         .frame(width: 44, height: 44)
                         .scaleEffect(1.2)
                         .opacity(0.6)
-                        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isListening)
+                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true),
+                                   value: isListening)
                 }
 
                 Text("\(number)")
@@ -208,12 +231,11 @@ public struct ListenDetectionView: View {
             }
             .frame(width: 80)
 
-            Text(identifier.displayName)
+            Text(SoundIdentifier.allCases[identifier].displayName)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-                .lineSpacing(6)        // add line spacing
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(6)
 
             if !isDetected {
                 RoundedRectangle(cornerRadius: 2)

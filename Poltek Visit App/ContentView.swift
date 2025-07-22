@@ -36,6 +36,8 @@ struct ContentView: View {
 
     // MARK: — Persistent state
     @State private var qrScannedClues: Set<Int> = []
+    @State private var nfcScannedClues: Set<Int> = []
+    @State private var listenScannedClues: Set<Int> = []
     @State private var completedScanTabs: Set<ScannerContainerView.Tab> = []
 
     // MARK: — Ephemeral (but persisted) state
@@ -47,12 +49,8 @@ struct ContentView: View {
     @State private var letterIndices: [String: Int] = [:]
 
     @State private var scannerSelectedTab: ScannerContainerView.Tab = .qr
-    @State private var nfcScannedClues: Set<Int> = []
-
     @State private var remainingPuzzles: [Page] = []
     @State private var currentPuzzle: Page?
-
-    // only restore once on launch
     @State private var didRestoreState = false
 
     private var teamInfo: TeamInfo? {
@@ -63,15 +61,18 @@ struct ContentView: View {
     var body: some View {
         content
             .onAppear(perform: restoreState)
-            // persist any changes immediately back into SwiftData
-            .onChange(of: qrScannedClues)     { teamSetting.qrClues = Array($0) }
+            // persist all four clue sets
+            .onChange(of: qrScannedClues)     { teamSetting.qrClues       = Array($0) }
+            .onChange(of: nfcScannedClues)    { teamSetting.nfcClues      = Array($0) }
+            .onChange(of: listenScannedClues) { teamSetting.listenClues   = Array($0) }
+            // persist tabs & puzzles
             .onChange(of: completedScanTabs)  { teamSetting.completedTabs = $0.map { $0.rawValue } }
-            .onChange(of: unlockedLetters)    { teamSetting.unlockedLetters = $0 }
+            // persist grid unlocks
+            .onChange(of: unlockedLetters)    { teamSetting.unlockedLetters    = $0 }
             .onChange(of: combinationUnlocked){ teamSetting.combinationUnlocked = $0 }
-            .onChange(of: letterIndices)      { teamSetting.letterIndices = $0 }
+            .onChange(of: letterIndices)      { teamSetting.letterIndices      = $0 }
     }
 
-    // pull the big switch out into its own @ViewBuilder
     @ViewBuilder
     private var content: some View {
         switch currentPage {
@@ -102,13 +103,14 @@ struct ContentView: View {
 
         case .scanner:
             ScannerContainerView(
-                selectedTab:     $scannerSelectedTab,
-                completedTabs:   $completedScanTabs,
-                qrScannedClues:  $qrScannedClues,
-                nfcScannedClues: $nfcScannedClues,
-                usageLeft:       usageLeft,
-                onBack:          { currentPage = .clueGrid },
-                onNext:          { tech in
+                selectedTab:         $scannerSelectedTab,
+                completedTabs:       $completedScanTabs,
+                qrScannedClues:      $qrScannedClues,
+                nfcScannedClues:     $nfcScannedClues,
+                listenScannedClues:  $listenScannedClues,
+                usageLeft:           usageLeft,
+                onBack:              { currentPage = .clueGrid },
+                onNext:              { tech in
                     usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
                     completedScanTabs.insert(scannerSelectedTab)
                     currentPuzzle = nil
@@ -206,16 +208,15 @@ struct ContentView: View {
         }
     }
 
-    // MARK: — State management
-
     private func restoreState() {
         guard !didRestoreState,
               !teamSetting.teamNumber.isEmpty
         else { return }
         didRestoreState = true
 
-        // bring every piece back from SwiftData
         qrScannedClues     = Set(teamSetting.qrClues)
+        nfcScannedClues    = Set(teamSetting.nfcClues)
+        listenScannedClues = Set(teamSetting.listenClues)
         completedScanTabs  = Set(
             teamSetting.completedTabs.compactMap {
                 ScannerContainerView.Tab(rawValue: $0)
@@ -235,31 +236,29 @@ struct ContentView: View {
             letterIndices = teamSetting.letterIndices
         }
 
-        // always start fresh on usageLeft
         usageLeft = Dictionary(
             uniqueKeysWithValues:
                 ScanTech.allCases.map { ($0, $0.maxUses) }
         )
-
         remainingPuzzles = [
-            .puzzleWords,
-            .puzzleHolidays,
-            .puzzleDailyLife,
-            .puzzleDailyFood,
-            .puzzlePlaces
+            .puzzleWords, .puzzleHolidays, .puzzleDailyLife,
+            .puzzleDailyFood, .puzzlePlaces
         ]
         currentPage = .clueGrid
     }
 
     private func resetSession() {
-        unlockedLetters     = []
+        qrScannedClues     = []
+        nfcScannedClues    = []
+        listenScannedClues = []
+        completedScanTabs  = []
+        unlockedLetters    = []
         combinationUnlocked = false
 
         usageLeft = Dictionary(
             uniqueKeysWithValues:
                 ScanTech.allCases.map { ($0, $0.maxUses) }
         )
-
         let mapping = Dictionary(
             uniqueKeysWithValues:
                 zip(["A","B","C","D"], (0..<4).shuffled())
@@ -268,17 +267,11 @@ struct ContentView: View {
         teamSetting.letterIndices = mapping
 
         remainingPuzzles = [
-            .puzzleWords,
-            .puzzleHolidays,
-            .puzzleDailyLife,
-            .puzzleDailyFood,
-            .puzzlePlaces
+            .puzzleWords, .puzzleHolidays, .puzzleDailyLife,
+            .puzzleDailyFood, .puzzlePlaces
         ]
         currentPuzzle = nil
         scannerSelectedTab = .qr
-        completedScanTabs = []
-        nfcScannedClues = []
-        qrScannedClues = []
     }
 
     private func advanceUnlock() {
