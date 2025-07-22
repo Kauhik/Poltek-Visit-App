@@ -1,6 +1,15 @@
 import SwiftUI
 
 struct MoveClassifierView: View {
+    // MARK: – Persistence keys
+    private static let keyDetectedSG = "MoveClassifierView.detectedSG"
+    private static let keyDetectedID = "MoveClassifierView.detectedID"
+
+    // MARK: – Persisted storage
+    @AppStorage(keyDetectedSG) private var storedDetectedSG: Bool = false
+    @AppStorage(keyDetectedID) private var storedDetectedID: Bool = false
+
+    // MARK: – UI state
     @StateObject private var vm = ActionClassifierViewModel()
     @Namespace private var moveAnimation
 
@@ -65,20 +74,23 @@ struct MoveClassifierView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .onAppear {
-            detectedSG = false
-            detectedID = false
+            // restore persisted flags
+            detectedSG = storedDetectedSG
+            detectedID = storedDetectedID
             vm.start()
         }
         .onReceive(vm.$actionLabel) { label in
-            if label == "SG" {
+            if label == "SG" && !detectedSG {
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                     detectedSG = true
                 }
+                storedDetectedSG = true
             }
-            if label == "ID" {
+            if label == "ID" && !detectedID {
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                     detectedID = true
                 }
+                storedDetectedID = true
             }
             if detectedSG && detectedID {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

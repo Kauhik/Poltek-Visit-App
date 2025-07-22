@@ -272,6 +272,10 @@ struct ContentView: View {
         ]
         currentPuzzle = nil
         scannerSelectedTab = .qr
+
+        // Clear persisted MoveClassifierView detection flags
+        UserDefaults.standard.removeObject(forKey: "MoveClassifierView.detectedSG")
+        UserDefaults.standard.removeObject(forKey: "MoveClassifierView.detectedID")
     }
 
     private func advanceUnlock() {
