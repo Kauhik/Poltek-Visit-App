@@ -38,7 +38,7 @@ struct ContentView: View {
     @State private var qrScannedClues: Set<Int> = []
     @State private var completedScanTabs: Set<ScannerContainerView.Tab> = []
 
-    // MARK: — Ephemeral state
+    // MARK: — Ephemeral (but persisted) state
     @State private var usageLeft: [ScanTech: Int] = Dictionary(
         uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
     )
@@ -52,190 +52,221 @@ struct ContentView: View {
     @State private var remainingPuzzles: [Page] = []
     @State private var currentPuzzle: Page?
 
+    // only restore once on launch
+    @State private var didRestoreState = false
+
     private var teamInfo: TeamInfo? {
         guard let n = Int(teamSetting.teamNumber) else { return nil }
         return TeamCodes.shared.info(for: n)
     }
 
     var body: some View {
-        Group {
-            switch currentPage {
-            case .teamEntry:
-                TeamInputView(
-                    teamNumber: Binding(
-                        get: { teamSetting.teamNumber },
-                        set: { teamSetting.teamNumber = $0 }
-                    )
-                ) {
-                    resetSession()
-                    currentPage = .clueGrid
-                }
+        content
+            .onAppear(perform: restoreState)
+            // persist any changes immediately back into SwiftData
+            .onChange(of: qrScannedClues)     { teamSetting.qrClues = Array($0) }
+            .onChange(of: completedScanTabs)  { teamSetting.completedTabs = $0.map { $0.rawValue } }
+            .onChange(of: unlockedLetters)    { teamSetting.unlockedLetters = $0 }
+            .onChange(of: combinationUnlocked){ teamSetting.combinationUnlocked = $0 }
+            .onChange(of: letterIndices)      { teamSetting.letterIndices = $0 }
+    }
 
-            case .clueGrid:
-                ClueListView(
-                    teamNumber:          teamSetting.teamNumber,
-                    unlockedLetters:     Set(unlockedLetters),
-                    pin:                 teamInfo?.pin ?? "",
-                    letterIndices:       letterIndices,
-                    combinationUnlocked: combinationUnlocked
-                ) {
-                    // pick next unused tab
-                    scannerSelectedTab = ScannerContainerView.Tab.allCases.first {
-                        !completedScanTabs.contains($0)
-                    } ?? .qr
-                    currentPage = .scanner
-                }
-
-            case .scanner:
-                ScannerContainerView(
-                    selectedTab:     $scannerSelectedTab,
-                    completedTabs:   $completedScanTabs,
-                    qrScannedClues:  $qrScannedClues,
-                    nfcScannedClues: $nfcScannedClues,
-                    usageLeft:       usageLeft,
-                    onBack:          { currentPage = .clueGrid },
-                    onNext:          { tech in
-                        usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
-                        completedScanTabs.insert(scannerSelectedTab)
-                        currentPuzzle = nil
-                        currentPage = .puzzleSelect
-                    }
+    // pull the big switch out into its own @ViewBuilder
+    @ViewBuilder
+    private var content: some View {
+        switch currentPage {
+        case .teamEntry:
+            TeamInputView(
+                teamNumber: Binding(
+                    get: { teamSetting.teamNumber },
+                    set: { teamSetting.teamNumber = $0 }
                 )
-                .ignoresSafeArea()
-                .onAppear {
-                    // restore persisted QR progress
-                    if qrScannedClues.isEmpty, !teamSetting.qrClues.isEmpty {
-                        qrScannedClues = Set(teamSetting.qrClues)
-                    }
-                    // restore which tabs are done
-                    if completedScanTabs.isEmpty, !teamSetting.completedTabs.isEmpty {
-                        completedScanTabs = Set(
-                            teamSetting.completedTabs.compactMap {
-                                ScannerContainerView.Tab(rawValue: $0)
-                            }
-                        )
-                    }
-                    // skip any already‑done tab
-                    if completedScanTabs.contains(scannerSelectedTab) {
-                        scannerSelectedTab = ScannerContainerView.Tab.allCases.first {
-                            !completedScanTabs.contains($0)
-                        } ?? .qr
-                    }
-                }
-
-            case .puzzleSelect:
-                Color.clear.onAppear {
-                    if currentPuzzle == nil {
-                        guard !remainingPuzzles.isEmpty else {
-                            currentPage = .clueGrid
-                            return
-                        }
-                        let choice = remainingPuzzles.randomElement()!
-                        remainingPuzzles.removeAll { $0 == choice }
-                        currentPuzzle = choice
-                    }
-                    currentPage = currentPuzzle!
-                }
-
-            case .puzzleWords:
-                MatchingPuzzleView(
-                    onComplete: {
-                        advanceUnlock()
-                        currentPuzzle = nil
-                        currentPage = .codeReveal
-                    },
-                    onBack: { currentPage = .scanner }
-                )
-
-            case .puzzleHolidays:
-                HolidayPuzzleView(
-                    onComplete: {
-                        advanceUnlock()
-                        currentPuzzle = nil
-                        currentPage = .codeReveal
-                    },
-                    onBack: { currentPage = .scanner }
-                )
-
-            case .puzzleDailyLife:
-                DailyLifePuzzleView(
-                    onComplete: {
-                        advanceUnlock()
-                        currentPuzzle = nil
-                        currentPage = .codeReveal
-                    },
-                    onBack: { currentPage = .scanner }
-                )
-
-            case .puzzleDailyFood:
-                DailyFoodPuzzleView(
-                    onComplete: {
-                        advanceUnlock()
-                        currentPuzzle = nil
-                        currentPage = .codeReveal
-                    },
-                    onBack: { currentPage = .scanner }
-                )
-
-            case .puzzlePlaces:
-                PlacesPuzzleView(
-                    onComplete: {
-                        advanceUnlock()
-                        currentPuzzle = nil
-                        currentPage = .codeReveal
-                    },
-                    onBack: { currentPage = .scanner }
-                )
-
-            case .codeReveal:
-                let pin = teamInfo?.pin ?? ""
-                if combinationUnlocked {
-                    CodeView(code: "", codeLabel: "Click Done") {
-                        currentPage = .clueGrid
-                    }
-                } else if
-                    let last = unlockedLetters.last,
-                    let idx  = letterIndices[last],
-                    idx < pin.count
-                {
-                    let digit = String(pin[pin.index(pin.startIndex, offsetBy: idx)])
-                    CodeView(code: digit, codeLabel: "Code \(last)") {
-                        currentPage = .clueGrid
-                    }
-                } else {
-                    CodeView(code: "0", codeLabel: "Code") {
-                        currentPage = .clueGrid
-                    }
-                }
-            }
-        }
-        .onAppear {
-            // if reopening with a saved team, reset and jump to clue grid
-            if !teamSetting.teamNumber.isEmpty && currentPage == .teamEntry {
+            ) {
                 resetSession()
                 currentPage = .clueGrid
             }
-        }
-        // persist QR and tab‑completion changes back to the model
-        .onChange(of: qrScannedClues) { new in
-            teamSetting.qrClues = Array(new)
-        }
-        .onChange(of: completedScanTabs) { new in
-            teamSetting.completedTabs = new.map { $0.rawValue }
+
+        case .clueGrid:
+            ClueListView(
+                teamNumber:          teamSetting.teamNumber,
+                unlockedLetters:     Set(unlockedLetters),
+                pin:                 teamInfo?.pin ?? "",
+                letterIndices:       letterIndices,
+                combinationUnlocked: combinationUnlocked
+            ) {
+                scannerSelectedTab = ScannerContainerView.Tab.allCases.first {
+                    !completedScanTabs.contains($0)
+                } ?? .qr
+                currentPage = .scanner
+            }
+
+        case .scanner:
+            ScannerContainerView(
+                selectedTab:     $scannerSelectedTab,
+                completedTabs:   $completedScanTabs,
+                qrScannedClues:  $qrScannedClues,
+                nfcScannedClues: $nfcScannedClues,
+                usageLeft:       usageLeft,
+                onBack:          { currentPage = .clueGrid },
+                onNext:          { tech in
+                    usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
+                    completedScanTabs.insert(scannerSelectedTab)
+                    currentPuzzle = nil
+                    currentPage = .puzzleSelect
+                }
+            )
+            .ignoresSafeArea()
+
+        case .puzzleSelect:
+            Color.clear.onAppear {
+                if currentPuzzle == nil {
+                    guard !remainingPuzzles.isEmpty else {
+                        currentPage = .clueGrid
+                        return
+                    }
+                    let choice = remainingPuzzles.randomElement()!
+                    remainingPuzzles.removeAll { $0 == choice }
+                    currentPuzzle = choice
+                }
+                currentPage = currentPuzzle!
+            }
+
+        case .puzzleWords:
+            MatchingPuzzleView(
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
+            )
+
+        case .puzzleHolidays:
+            HolidayPuzzleView(
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
+            )
+
+        case .puzzleDailyLife:
+            DailyLifePuzzleView(
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
+            )
+
+        case .puzzleDailyFood:
+            DailyFoodPuzzleView(
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
+            )
+
+        case .puzzlePlaces:
+            PlacesPuzzleView(
+                onComplete: {
+                    advanceUnlock()
+                    currentPuzzle = nil
+                    currentPage = .codeReveal
+                },
+                onBack: { currentPage = .scanner }
+            )
+
+        case .codeReveal:
+            let pin = teamInfo?.pin ?? ""
+            if combinationUnlocked {
+                CodeView(code: "", codeLabel: "Click Done") {
+                    currentPage = .clueGrid
+                }
+            } else if
+                let last = unlockedLetters.last,
+                let idx  = letterIndices[last],
+                idx < pin.count
+            {
+                let digit = String(
+                    pin[pin.index(pin.startIndex, offsetBy: idx)]
+                )
+                CodeView(code: digit, codeLabel: "Code \(last)") {
+                    currentPage = .clueGrid
+                }
+            } else {
+                CodeView(code: "0", codeLabel: "Code") {
+                    currentPage = .clueGrid
+                }
+            }
         }
     }
 
-    // MARK: — Helpers
+    // MARK: — State management
+
+    private func restoreState() {
+        guard !didRestoreState,
+              !teamSetting.teamNumber.isEmpty
+        else { return }
+        didRestoreState = true
+
+        // bring every piece back from SwiftData
+        qrScannedClues     = Set(teamSetting.qrClues)
+        completedScanTabs  = Set(
+            teamSetting.completedTabs.compactMap {
+                ScannerContainerView.Tab(rawValue: $0)
+            }
+        )
+        unlockedLetters    = teamSetting.unlockedLetters
+        combinationUnlocked = teamSetting.combinationUnlocked
+
+        if teamSetting.letterIndices.isEmpty {
+            let mapping = Dictionary(
+                uniqueKeysWithValues:
+                    zip(["A","B","C","D"], (0..<4).shuffled())
+            )
+            letterIndices = mapping
+            teamSetting.letterIndices = mapping
+        } else {
+            letterIndices = teamSetting.letterIndices
+        }
+
+        // always start fresh on usageLeft
+        usageLeft = Dictionary(
+            uniqueKeysWithValues:
+                ScanTech.allCases.map { ($0, $0.maxUses) }
+        )
+
+        remainingPuzzles = [
+            .puzzleWords,
+            .puzzleHolidays,
+            .puzzleDailyLife,
+            .puzzleDailyFood,
+            .puzzlePlaces
+        ]
+        currentPage = .clueGrid
+    }
 
     private func resetSession() {
-        unlockedLetters = []
+        unlockedLetters     = []
         combinationUnlocked = false
+
         usageLeft = Dictionary(
-            uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
+            uniqueKeysWithValues:
+                ScanTech.allCases.map { ($0, $0.maxUses) }
         )
-        letterIndices = Dictionary(
-            uniqueKeysWithValues: zip(["A","B","C","D"], (0..<4).shuffled())
+
+        let mapping = Dictionary(
+            uniqueKeysWithValues:
+                zip(["A","B","C","D"], (0..<4).shuffled())
         )
+        letterIndices = mapping
+        teamSetting.letterIndices = mapping
+
         remainingPuzzles = [
             .puzzleWords,
             .puzzleHolidays,

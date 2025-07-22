@@ -15,12 +15,25 @@ struct CameraFeedView: View {
     /// Unused in this mode; required by container
     var onNext: () -> Void
 
-    @State private var discovered: [String: Bool] = [
-        "Ezlink": false,
-        "Mangkok ayam": false,
-        "Merlion": false,
-        "Welcome to Batam": false
-    ]
+    // persist key
+    private static let discoveredKey = "CameraFeedView.discoveredClues"
+
+    /// Discovered clue labels (persisted)
+    @State private var discovered: [String: Bool] = {
+        // default labels
+        let defaults: [String: Bool] = [
+            "Ezlink": false,
+            "Mangkok ayam": false,
+            "Merlion": false,
+            "Welcome to Batam": false
+        ]
+        // load saved
+        if let saved = UserDefaults.standard.dictionary(forKey: discoveredKey) as? [String: Bool] {
+            // merge to ensure any new keys get defaulted
+            return defaults.merging(saved) { _, new in new }
+        }
+        return defaults
+    }()
 
     @State private var session = AVCaptureSession()
     @State private var classificationRequest: VNCoreMLRequest?
@@ -222,7 +235,7 @@ struct CameraFeedView: View {
                 DispatchQueue.main.async {
                     if conf >= thresh, discovered[label] == false {
                         discovered[label] = true
-
+                        saveDiscovered()
                         if discovered.values.allSatisfy({ $0 }) {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                 onAllDetected()
@@ -250,6 +263,10 @@ struct CameraFeedView: View {
             options: [:]
         )
         try? handler.perform([req])
+    }
+
+    private func saveDiscovered() {
+        UserDefaults.standard.set(discovered, forKey: Self.discoveredKey)
     }
 }
 
