@@ -37,6 +37,7 @@ struct ScannerContainerView: View {
 
     var body: some View {
         NavigationStack {
+            
             ZStack {
                 Color.black.ignoresSafeArea()
                 contentBody().ignoresSafeArea(edges: .all)
@@ -50,6 +51,7 @@ struct ScannerContainerView: View {
             // Load persisted NFC clues
             if let data = UserDefaults.standard.data(forKey: Self.nfcCluesKey),
                let arr = try? JSONDecoder().decode([Int].self, from: data) {
+                
                 nfcScannedClues = Set(arr)
             }
         }
