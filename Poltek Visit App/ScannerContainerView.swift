@@ -15,18 +15,16 @@ struct ScannerContainerView: View {
     @Binding var qrScannedClues: Set<Int>
     @Binding var nfcScannedClues: Set<Int>
     @Binding var listenScannedClues: Set<Int>
-    let usageLeft: [ScanTech: Int]
+    let usageLeft: [ScanTech: Int]           // <-- uses the global ScanTech
     var onBack: () -> Void
-    var onNext: (ScanTech) -> Void
+    var onNext: (ScanTech) -> Void          // <-- uses the global ScanTech
 
     @State private var lastTagData: String = ""
     @State private var didFinishCurrent = false
     @StateObject private var tagScanner = TagScanner()
     @Namespace private var clueAnimation
 
-    // MARK: — Persistence key for NFC clues
     private static let nfcCluesKey = "ScannerContainerView.nfcScannedClues"
-
     private let qrClueURLs = [
         "https://qrs.ly/bkgtv1h",
         "https://qrs.ly/ntgtv2j",
@@ -37,7 +35,6 @@ struct ScannerContainerView: View {
 
     var body: some View {
         NavigationStack {
-            
             ZStack {
                 Color.black.ignoresSafeArea()
                 contentBody().ignoresSafeArea(edges: .all)
@@ -48,15 +45,12 @@ struct ScannerContainerView: View {
         }
         .onAppear {
             didFinishCurrent = false
-            // Load persisted NFC clues
             if let data = UserDefaults.standard.data(forKey: Self.nfcCluesKey),
                let arr = try? JSONDecoder().decode([Int].self, from: data) {
-                
                 nfcScannedClues = Set(arr)
             }
         }
         .onChange(of: nfcScannedClues) { new in
-            // Save NFC clues
             if let data = try? JSONEncoder().encode(Array(new)) {
                 UserDefaults.standard.set(data, forKey: Self.nfcCluesKey)
             }
@@ -80,48 +74,39 @@ struct ScannerContainerView: View {
                 guard !didFinishCurrent,
                       let idx = qrClueURLs.firstIndex(of: code)
                 else { return }
-
                 withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                     qrScannedClues.insert(idx + 1)
                 }
                 if qrScannedClues.count == qrClueURLs.count {
-                    finish(.camera)
+                    finish(.camera)      // <-- global ScanTech.camera
                 }
             }
             VStack {
                 Spacer()
-                animatedClueLabels(count: qrClueURLs.count,
-                                   lit: qrScannedClues)
+                animatedClueLabels(count: qrClueURLs.count, lit: qrScannedClues)
             }
         }
     }
 
     private var scanView: some View {
-        CameraFeedView(
-            onAllDetected: { finish(.camera) },
-            onNext:        { finish(.camera) }
-        )
+        CameraFeedView(onAllDetected: { finish(.camera) },
+                       onNext:        { finish(.camera) })
     }
 
     private var listenView: some View {
-        ListenDetectionView(
-            detectedClues: $listenScannedClues,
-            onAllDetected: { finish(.microphone) },
-            onNext:        { finish(.microphone) }
-        )
+        ListenDetectionView(detectedClues: $listenScannedClues,
+                            onAllDetected: { finish(.microphone) },
+                            onNext:        { finish(.microphone) })
     }
 
     private var moveView: some View {
-        MoveClassifierView(
-            onDone: { finish(.ar) },
-            onBack: onBack
-        )
+        MoveClassifierView(onDone: { finish(.ar) },
+                           onBack: onBack)
     }
 
     private var nfcView: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-
             VStack(spacing: 16) {
                 Spacer()
                 Image(systemName: "wave.3.right")
@@ -146,8 +131,7 @@ struct ScannerContainerView: View {
             }
         }
         .onReceive(tagScanner.$scannedData) { messages in
-            guard !didFinishCurrent,
-                  let raw = messages.last else { return }
+            guard !didFinishCurrent, let raw = messages.last else { return }
             let clean = raw.trimmingCharacters(in: .controlCharacters)
             lastTagData = clean
             switch clean {
@@ -171,34 +155,28 @@ struct ScannerContainerView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundColor(lit.contains(idx) ? .black : .white)
                         .frame(width: 40, height: 40)
-                        .background(
-                            Circle()
-                                .fill(
-                                    lit.contains(idx)
-                                        ? LinearGradient(colors: [.green, .mint],
-                                                         startPoint: .topLeading,
-                                                         endPoint: .bottomTrailing)
-                                        : LinearGradient(colors: [.gray.opacity(0.3),
-                                                                  .gray.opacity(0.1)],
-                                                         startPoint: .topLeading,
-                                                         endPoint: .bottomTrailing)
-                                )
-                                .overlay(
-                                    Circle()
-                                        .stroke(
-                                            lit.contains(idx)
-                                                ? .white.opacity(0.3)
-                                                : .gray.opacity(0.2),
-                                            lineWidth: 1
-                                        )
-                                )
+                        .background(Circle()
+                            .fill(
+                                lit.contains(idx)
+                                    ? LinearGradient(colors: [.green, .mint],
+                                                     startPoint: .topLeading,
+                                                     endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [.gray.opacity(0.3),
+                                                              .gray.opacity(0.1)],
+                                                     startPoint: .topLeading,
+                                                     endPoint: .bottomTrailing)
+                            )
+                            .overlay(Circle().stroke(
+                                lit.contains(idx)
+                                    ? .white.opacity(0.3)
+                                    : .gray.opacity(0.2),
+                                lineWidth: 1
+                            ))
                         )
                         .scaleEffect(lit.contains(idx) ? 1.2 : 1.0)
                         .rotationEffect(.degrees(lit.contains(idx) ? 360 : 0))
-                        .shadow(
-                            color: lit.contains(idx) ? .green.opacity(0.6) : .clear,
-                            radius: lit.contains(idx) ? 8 : 0
-                        )
+                        .shadow(color: lit.contains(idx) ? .green.opacity(0.6) : .clear,
+                                radius: lit.contains(idx) ? 8 : 0)
 
                     Text("Clue")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
@@ -206,11 +184,9 @@ struct ScannerContainerView: View {
                         .opacity(lit.contains(idx) ? 1.0 : 0.6)
                 }
                 .matchedGeometryEffect(id: idx, in: clueAnimation)
-                .animation(
-                    .spring(response: 0.8, dampingFraction: 0.6)
-                        .delay(Double(idx) * 0.1),
-                    value: lit.contains(idx)
-                )
+                .animation(.spring(response: 0.8, dampingFraction: 0.6)
+                            .delay(Double(idx) * 0.1),
+                           value: lit.contains(idx))
             }
         }
         .padding(.horizontal, 20)
@@ -218,10 +194,8 @@ struct ScannerContainerView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
+                .overlay(RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color.white.opacity(0.1), lineWidth: 1))
         )
         .padding(.bottom, 20)
     }
@@ -250,11 +224,9 @@ struct ScannerContainerView: View {
                         Circle()
                             .fill(Color.white)
                             .frame(width: 44, height: 44)
-                            .overlay(
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundColor(.black)
-                            )
+                            .overlay(Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(.black))
                             .shadow(radius: 4)
                     }
                     Spacer()
@@ -269,20 +241,25 @@ struct ScannerContainerView: View {
     private var bottomTabBar: some View {
         HStack {
             ForEach(Tab.allCases) { tab in
-                Button {
-                    selectedTab = tab
-                } label: {
+                Button { selectedTab = tab } label: {
                     VStack(spacing: 4) {
                         Image(systemName: tab.iconName)
                             .font(.system(size: 20))
-                            .foregroundColor(selectedTab == tab ? .orange : .gray)
+                            .foregroundColor(
+                                completedTabs.contains(tab)
+                                    ? .green
+                                    : (selectedTab == tab ? .orange : .gray)
+                            )
                         Text(tab.label)
                             .font(.caption2)
-                            .foregroundColor(selectedTab == tab ? .orange : .gray)
+                            .foregroundColor(
+                                completedTabs.contains(tab)
+                                    ? .green
+                                    : (selectedTab == tab ? .orange : .gray)
+                            )
                     }
                 }
                 .disabled(completedTabs.contains(tab))
-                .opacity(completedTabs.contains(tab) ? 0.5 : 1.0)
                 .frame(maxWidth: .infinity)
             }
         }
