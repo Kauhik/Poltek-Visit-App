@@ -15,8 +15,6 @@ public enum SoundIdentifier: String, CaseIterable {
     case doorsClosing     = "SMRT Doors Closing"
     case pedestrianButton = "Singapore Pedestrian Crossing Button"
     case wallKeliling     = "Suara Es Krim Wall's Keliling"
-
-    public var displayName: String { rawValue }
 }
 
 /// Tracks a single sound’s “found/not found” as 0→1 progress.
@@ -24,20 +22,33 @@ public struct DetectionState {
     public var currentConfidence: Double = 0
 }
 
-/// Manages the classifier + raw results → binary “found” states.
+/// Manages the classifier + raw results → binary “found” states,
+/// now requiring multiple high‑confidence frames to reduce false positives.
 public class ListenDetectionManager: ObservableObject {
     @Published public var detectionStates: [(SoundIdentifier, DetectionState)]
     private var classifier: SystemAudioClassifier?
-    private let detectionThreshold: Double = 0.8
+
+    /// Increase this to make detection stricter.
+    private let detectionThreshold: Double = 0.9
+
+    /// Number of consecutive frames above threshold before marking found.
+    private let requiredConsecutiveDetections = 3
+
+    /// Tracks consecutive high‑confidence counts per sound.
+    private var consecutiveCount: [SoundIdentifier: Int]
 
     public init() {
-        detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
+        let identifiers = SoundIdentifier.allCases
+        detectionStates = identifiers.map { ($0, DetectionState()) }
+        consecutiveCount = Dictionary(uniqueKeysWithValues: identifiers.map { ($0, 0) })
     }
 
-    /// Only start listening once; call this explicitly.
+    /// Start or restart listening.
     public func startListening() {
-        // reset states if you really need a fresh start:
         detectionStates = SoundIdentifier.allCases.map { ($0, DetectionState()) }
+        for key in consecutiveCount.keys {
+            consecutiveCount[key] = 0
+        }
         classifier?.stop()
         classifier = nil
         let newClassifier = SystemAudioClassifier()
@@ -49,14 +60,21 @@ public class ListenDetectionManager: ObservableObject {
 
 extension ListenDetectionManager: AudioClassificationDelegate {
     public func classificationDidUpdate(label: String, confidence: Double) {
-        guard confidence >= detectionThreshold,
-              let id = SoundIdentifier(rawValue: label),
+        guard let id = SoundIdentifier(rawValue: label),
               let idx = detectionStates.firstIndex(where: { $0.0 == id })
         else { return }
 
-        DispatchQueue.main.async {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                self.detectionStates[idx].1.currentConfidence = 1.0
+        if confidence >= detectionThreshold {
+            consecutiveCount[id]! += 1
+        } else {
+            consecutiveCount[id]! = 0
+        }
+
+        if consecutiveCount[id]! >= requiredConsecutiveDetections {
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                    self.detectionStates[idx].1.currentConfidence = 1.0
+                }
             }
         }
     }
@@ -68,7 +86,7 @@ public struct ListenDetectionView: View {
     @StateObject private var manager = ListenDetectionManager()
     @Namespace private var audioAnimation
 
-    /// Called after the 1 second buffer once all detect.
+    /// Called after the 1‑second buffer once all detect.
     public var onAllDetected: () -> Void
     /// Manual override
     public var onNext: () -> Void
@@ -118,11 +136,10 @@ public struct ListenDetectionView: View {
             }
         }
         .onAppear {
-            // only set up once
             guard !didSetup else { return }
             didSetup = true
             manager.startListening()
-            // replay any previously detected clues into the UI
+            // restore any previously detected clues
             for idx in detectedClues {
                 let pos = idx - 1
                 if manager.detectionStates.indices.contains(pos) {
@@ -132,17 +149,14 @@ public struct ListenDetectionView: View {
             didScheduleAdvance = false
         }
         .onReceive(manager.$detectionStates) { states in
-            // mark each newly detected sound
             for (idx, item) in states.enumerated() {
                 if item.1.currentConfidence >= 1.0 {
                     detectedClues.insert(idx + 1)
                 }
             }
-            // once all four have fired
             guard !didScheduleAdvance,
                   states.allSatisfy({ $0.1.currentConfidence >= 1.0 })
             else { return }
-
             didScheduleAdvance = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 onAllDetected()
@@ -231,11 +245,10 @@ public struct ListenDetectionView: View {
             }
             .frame(width: 80)
 
-            Text(SoundIdentifier.allCases[identifier].displayName)
+            Text("Clue")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
-                .lineSpacing(6)
 
             if !isDetected {
                 RoundedRectangle(cornerRadius: 2)

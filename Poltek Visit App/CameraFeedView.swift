@@ -18,9 +18,9 @@ struct CameraFeedView: View {
     // persist key
     private static let discoveredKey = "CameraFeedView.discoveredClues"
 
-    /// Discovered clue labels (persisted)
+    /// Discovered clue flags (persisted)
     @State private var discovered: [String: Bool] = {
-        // default labels
+        // default labels (keys stay the same for logic)
         let defaults: [String: Bool] = [
             "Ezlink": false,
             "Mangkok ayam": false,
@@ -29,7 +29,6 @@ struct CameraFeedView: View {
         ]
         // load saved
         if let saved = UserDefaults.standard.dictionary(forKey: discoveredKey) as? [String: Bool] {
-            // merge to ensure any new keys get defaulted
             return defaults.merging(saved) { _, new in new }
         }
         return defaults
@@ -50,7 +49,6 @@ struct CameraFeedView: View {
                 .ignoresSafeArea()
 
             VStack {
-                // Toast on failed match
                 if showToast {
                     HStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -77,7 +75,6 @@ struct CameraFeedView: View {
 
                 Spacer()
 
-                // Capture button
                 Button(action: {
                     if let buffer = bufferExchange.pixelBuffer {
                         classify(buffer: buffer)
@@ -103,7 +100,6 @@ struct CameraFeedView: View {
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
 
-                // Clue indicators in a single row of 4
                 detectionLabelsView()
             }
         }
@@ -167,11 +163,12 @@ struct CameraFeedView: View {
                             .delay(Double(number) * 0.05),
                            value: done)
 
-            Text(label)
+            // Always display generic "Clue" instead of the specific label
+            Text("Clue")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .frame(width: 60)

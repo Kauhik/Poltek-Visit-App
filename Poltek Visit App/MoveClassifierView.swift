@@ -1,3 +1,4 @@
+
 import SwiftUI
 
 struct MoveClassifierView: View {
@@ -13,17 +14,17 @@ struct MoveClassifierView: View {
     @StateObject private var vm = ActionClassifierViewModel()
     @Namespace private var moveAnimation
 
-    /// Tracks whether SG and ID have been detected
     @State private var detectedSG = false
     @State private var detectedID = false
 
-    /// Called when both SG and ID are detected
+    @State private var showMultiPersonToast = false
+    @State private var showWholeBodyToast = false
+
     var onDone: () -> Void
     var onBack: () -> Void
 
     var body: some View {
         ZStack {
-            // MARK: – Background camera feed
             if let image = vm.previewImage {
                 Image(uiImage: image)
                     .resizable()
@@ -35,14 +36,11 @@ struct MoveClassifierView: View {
             }
 
             VStack {
-                // MARK: – Centered classification box under notch
                 HStack {
                     Spacer()
                     VStack(alignment: .leading, spacing: 8) {
                         Text(vm.actionLabel)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .font(.title2).bold().foregroundColor(.white)
                         Text(vm.confidenceLabel)
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.8))
@@ -59,11 +57,34 @@ struct MoveClassifierView: View {
                     )
                     Spacer()
                 }
-                .padding(.top, 80) // adjust for notch height
+                .padding(.top, 80)
+
+                if showMultiPersonToast {
+                    Text("Ensure there’s only one person")
+                        .font(.subheadline).bold()
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.8))
+                        .cornerRadius(12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(1)
+                }
+
+                if showWholeBodyToast {
+                    Text("Whole body must be visible")
+                        .font(.subheadline).bold()
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.orange.opacity(0.8))
+                        .cornerRadius(12)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(1)
+                }
 
                 Spacer()
 
-                // MARK: – Centered SG/ID indicators at bottom
                 HStack {
                     Spacer()
                     animatedMoveLabels()
@@ -74,22 +95,17 @@ struct MoveClassifierView: View {
             .ignoresSafeArea(edges: .bottom)
         }
         .onAppear {
-            // restore persisted flags
             detectedSG = storedDetectedSG
             detectedID = storedDetectedID
             vm.start()
         }
         .onReceive(vm.$actionLabel) { label in
-            if label == "SG" && !detectedSG {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                    detectedSG = true
-                }
+            if label == "SG", !detectedSG {
+                detectedSG = true
                 storedDetectedSG = true
             }
-            if label == "ID" && !detectedID {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                    detectedID = true
-                }
+            if label == "ID", !detectedID {
+                detectedID = true
                 storedDetectedID = true
             }
             if detectedSG && detectedID {
@@ -99,24 +115,36 @@ struct MoveClassifierView: View {
                 }
             }
         }
+        .onReceive(vm.$poseCount) { count in
+            guard count > 1 else { return }
+            withAnimation { showMultiPersonToast = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation { showMultiPersonToast = false }
+            }
+        }
+        .onReceive(vm.$largestPoseArea) { area in
+            // if the person is too small (body off-camera), warn
+            if vm.poseCount == 1, area < 0.3 {
+                withAnimation { showWholeBodyToast = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation { showWholeBodyToast = false }
+                }
+            }
+        }
     }
 
     private func animatedMoveLabels() -> some View {
         HStack(spacing: 24) {
-            moveDetectionItem(
-                label: "SG",
-                fullName: "Singapore",
-                number: 1,
-                isDetected: detectedSG,
-                colors: [.red, .orange]
-            )
-            moveDetectionItem(
-                label: "ID",
-                fullName: "Indonesia",
-                number: 2,
-                isDetected: detectedID,
-                colors: [.blue, .cyan]
-            )
+            moveDetectionItem(label: "SG",
+                              fullName: "Singapore",
+                              number: 1,
+                              isDetected: detectedSG,
+                              colors: [.red, .orange])
+            moveDetectionItem(label: "ID",
+                              fullName: "Indonesia",
+                              number: 2,
+                              isDetected: detectedID,
+                              colors: [.blue, .cyan])
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
@@ -142,8 +170,13 @@ struct MoveClassifierView: View {
                 Circle()
                     .fill(
                         isDetected
-                        ? LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
-                        : LinearGradient(colors: [.gray.opacity(0.3), .gray.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        ? LinearGradient(colors: colors,
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [.gray.opacity(0.3),
+                                                  .gray.opacity(0.1)],
+                                         startPoint: .topLeading,
+                                         endPoint: .bottomTrailing)
                     )
                     .frame(width: 50, height: 50)
 
@@ -153,23 +186,24 @@ struct MoveClassifierView: View {
                         .frame(width: 50, height: 50)
                         .scaleEffect(1.3)
                         .opacity(0.6)
-                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: vm.actionLabel)
+                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true),
+                                   value: vm.actionLabel)
                 }
 
                 Text("\(number)")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(isDetected ? .black : .white)
             }
-            .scaleEffect(isDetected ? 1.2 : vm.actionLabel == label ? 1.1 : 1)
+            .scaleEffect(isDetected
+                         ? 1.2
+                         : vm.actionLabel == label ? 1.1 : 1)
             .rotationEffect(.degrees(isDetected ? 360 : 0))
-            .shadow(
-                color: isDetected
+            .shadow(color: isDetected
                     ? colors.first!.opacity(0.6)
                     : vm.actionLabel == label
                         ? colors.first!.opacity(0.3)
                         : .clear,
-                radius: isDetected ? 10 : vm.actionLabel == label ? 5 : 0
-            )
+                    radius: isDetected ? 10 : vm.actionLabel == label ? 5 : 0)
 
             VStack(spacing: 4) {
                 Text(label)
@@ -184,26 +218,32 @@ struct MoveClassifierView: View {
 
             VStack(spacing: 6) {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(
-                        isDetected
-                        ? colors.first!
-                        : vm.actionLabel == label
+                    .fill(isDetected
+                          ? colors.first!
+                          : vm.actionLabel == label
                             ? .yellow.opacity(0.7)
-                            : .gray.opacity(0.3)
-                    )
+                            : .gray.opacity(0.3))
                     .frame(width: 60, height: 4)
 
-                Text(isDetected ? "✓ Done" : (vm.actionLabel == label ? "Detecting..." : "Waiting"))
+                Text(isDetected
+                     ? "✓ Done"
+                     : (vm.actionLabel == label ? "Detecting..." : "Waiting"))
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundColor(.white)
             }
         }
         .frame(width: 100)
         .matchedGeometryEffect(id: label, in: moveAnimation)
-        .animation(.spring(response: 0.8, dampingFraction: 0.6).delay(Double(number) * 0.1), value: isDetected)
-        .animation(.easeInOut(duration: 0.3), value: vm.actionLabel == label)
+        .animation(.spring(response: 0.8, dampingFraction: 0.6)
+                    .delay(Double(number) * 0.1),
+                   value: isDetected)
+        .animation(.easeInOut(duration: 0.3),
+                   value: vm.actionLabel == label)
     }
 }
+
+
+
 
 struct MoveClassifierView_Previews: PreviewProvider {
     static var previews: some View {

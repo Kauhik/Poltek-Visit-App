@@ -17,8 +17,14 @@ class ActionClassifierViewModel: NSObject,
     @Published var actionLabel: String = ActionPrediction.startingPrediction.label
     @Published var confidenceLabel: String = "Observing..."
     @Published var actionFrameCounts: [String: Int] = [:]
-
-    /// New: mirror preview when front camera
+    
+    /// Number of poses detected in last frame
+    @Published var poseCount: Int = 0
+    
+    /// Estimate of the largest pose area (normalized 0...1)
+    @Published var largestPoseArea: CGFloat = 0
+    
+    /// Mirror preview when front camera
     @Published var isUsingFrontCamera: Bool
 
     private let videoCapture = VideoCapture()
@@ -50,20 +56,31 @@ class ActionClassifierViewModel: NSObject,
         isUsingFrontCamera = (videoCapture.currentPosition == .front)
     }
 
-    // ... rest of your delegates & drawing code unchanged ...
-    
+    // MARK: - VideoCaptureDelegate
+
     func videoCapture(_ videoCapture: VideoCapture,
                       didCreate framePublisher: FramePublisher) {
-        // reset labels
         actionLabel = ActionPrediction.startingPrediction.label
         confidenceLabel = "Observing..."
-        // feed into processing chain
         videoProcessingChain.upstreamFramePublisher = framePublisher
     }
+
+    // MARK: - VideoProcessingChainDelegate
 
     func videoProcessingChain(_ chain: VideoProcessingChain,
                               didDetect poses: [Pose]?,
                               in frame: CGImage) {
+        // How many people?
+        poseCount = poses?.count ?? 0
+        
+        // Find largest pose area
+        if let largest = poses?.max(by: { $0.area < $1.area }) {
+            largestPoseArea = largest.area
+        } else {
+            largestPoseArea = 0
+        }
+
+        // Render preview
         let img = drawPoses(poses, onto: frame)
         previewImage = img
     }
@@ -78,6 +95,8 @@ class ActionClassifierViewModel: NSObject,
         actionLabel = actionPrediction.label
         confidenceLabel = actionPrediction.confidenceString ?? "Observing..."
     }
+
+    // MARK: - Drawing
 
     private func drawPoses(_ poses: [Pose]?, onto frame: CGImage) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
