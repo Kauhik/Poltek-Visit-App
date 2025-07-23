@@ -20,14 +20,12 @@ struct CameraFeedView: View {
 
     /// Discovered clue flags (persisted)
     @State private var discovered: [String: Bool] = {
-        // default labels (keys stay the same for logic)
         let defaults: [String: Bool] = [
             "Ezlink": false,
             "Mangkok ayam": false,
             "Merlion": false,
             "Welcome to Batam": false
         ]
-        // load saved
         if let saved = UserDefaults.standard.dictionary(forKey: discoveredKey) as? [String: Bool] {
             return defaults.merging(saved) { _, new in new }
         }
@@ -39,6 +37,7 @@ struct CameraFeedView: View {
     @StateObject private var bufferExchange = BufferExchange()
     @Namespace private var detectionAnimation
     @State private var showToast = false
+    @State private var showScannedToast = false
 
     private let baseThreshold: VNConfidence = 0.8
     private let specialThreshold: VNConfidence = 0.9
@@ -49,6 +48,30 @@ struct CameraFeedView: View {
                 .ignoresSafeArea()
 
             VStack {
+                if showScannedToast {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 20, weight: .semibold))
+                        Text("Clue scanned!")
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .foregroundColor(.black)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showScannedToast)
+                    .padding(.top, 60)
+                }
+
                 if showToast {
                     HStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -75,6 +98,10 @@ struct CameraFeedView: View {
 
                 Spacer()
 
+                // Clue boxes above the button
+                detectionLabelsView()
+
+                // Capture button below the clue boxes
                 Button(action: {
                     if let buffer = bufferExchange.pixelBuffer {
                         classify(buffer: buffer)
@@ -96,11 +123,9 @@ struct CameraFeedView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 .contentShape(Rectangle())
-                .animation(.easeInOut(duration: 0.1), value: showToast)
+                .animation(.easeInOut(duration: 0.1), value: showToast || showScannedToast)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
-
-                detectionLabelsView()
             }
         }
         .onAppear { configureSession() }
@@ -163,7 +188,6 @@ struct CameraFeedView: View {
                             .delay(Double(number) * 0.05),
                            value: done)
 
-            // Always display generic "Clue" instead of the specific label
             Text("Clue")
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundColor(.black)
@@ -225,17 +249,22 @@ struct CameraFeedView: View {
                 let label = top.identifier
                 let conf  = top.confidence
                 let thresh: VNConfidence =
-                    label == "Ezlink"
-                        ? specialThreshold
-                        : baseThreshold
+                    (label == "Ezlink") ? specialThreshold : baseThreshold
 
                 DispatchQueue.main.async {
-                    if conf >= thresh, discovered[label] == false {
-                        discovered[label] = true
-                        saveDiscovered()
-                        if discovered.values.allSatisfy({ $0 }) {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                onAllDetected()
+                    if conf >= thresh {
+                        if discovered[label] == false {
+                            discovered[label] = true
+                            saveDiscovered()
+                            if discovered.values.allSatisfy({ $0 }) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                    onAllDetected()
+                                }
+                            }
+                        } else {
+                            showScannedToast = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                showScannedToast = false
                             }
                         }
                     } else {
