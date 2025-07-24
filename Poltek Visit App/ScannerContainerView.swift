@@ -112,7 +112,7 @@ struct ScannerContainerView: View {
                 Image(systemName: "wave.3.right")
                     .font(.system(size: 80))
                     .foregroundColor(.white)
-                Text("Hold near a Mentor's Access Card")
+                Text("Hold near a NFC Card")
                     .font(.headline)
                     .foregroundColor(.white)
                 Spacer()
