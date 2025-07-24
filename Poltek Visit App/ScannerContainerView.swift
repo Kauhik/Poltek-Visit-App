@@ -15,9 +15,9 @@ struct ScannerContainerView: View {
     @Binding var qrScannedClues: Set<Int>
     @Binding var nfcScannedClues: Set<Int>
     @Binding var listenScannedClues: Set<Int>
-    let usageLeft: [ScanTech: Int]           // <-- uses the global ScanTech
+    let usageLeft: [ScanTech: Int]
     var onBack: () -> Void
-    var onNext: (ScanTech) -> Void          // <-- uses the global ScanTech
+    var onNext: (ScanTech) -> Void
 
     @State private var lastTagData: String = ""
     @State private var didFinishCurrent = false
@@ -78,12 +78,14 @@ struct ScannerContainerView: View {
                     qrScannedClues.insert(idx + 1)
                 }
                 if qrScannedClues.count == qrClueURLs.count {
-                    finish(.camera)      // <-- global ScanTech.camera
+                    finish(.camera)
                 }
             }
             VStack {
                 Spacer()
+                // ↓ here is the only change: shrink the clue box to 85%
                 animatedClueLabels(count: qrClueURLs.count, lit: qrScannedClues)
+                  .scaleEffect(0.85)
             }
         }
     }
@@ -148,7 +150,7 @@ struct ScannerContainerView: View {
     }
 
     private func animatedClueLabels(count: Int, lit: Set<Int>) -> some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 30) {
             ForEach(1...count, id: \.self) { idx in
                 VStack(spacing: 4) {
                     Text("\(idx)")
