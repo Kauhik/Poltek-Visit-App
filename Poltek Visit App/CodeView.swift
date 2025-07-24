@@ -76,7 +76,7 @@ struct CodeView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.teal)
+                        .background(Color(red: 0.9, green: 0.4, blue: 0.0))
                         .foregroundColor(.white)
                         .cornerRadius(30)
                 }
