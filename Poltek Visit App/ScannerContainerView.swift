@@ -83,7 +83,7 @@ struct ScannerContainerView: View {
             }
             VStack {
                 Spacer()
-                // ↓ here is the only change: shrink the clue box to 85%
+                // Clue box (scaled to match camera view sizing)
                 animatedClueLabels(count: qrClueURLs.count, lit: qrScannedClues)
                   .scaleEffect(0.85)
             }
@@ -93,6 +93,7 @@ struct ScannerContainerView: View {
     private var scanView: some View {
         CameraFeedView(onAllDetected: { finish(.camera) },
                        onNext:        { finish(.camera) })
+        // — in CameraFeedView.swift, locate your capture button and darken its background opacity
     }
 
     private var listenView: some View {
@@ -111,24 +112,46 @@ struct ScannerContainerView: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 16) {
                 Spacer()
+
                 Image(systemName: "wave.3.right")
                     .font(.system(size: 80))
                     .foregroundColor(.white)
+
                 Text("Hold near a NFC Card")
                     .font(.headline)
                     .foregroundColor(.white)
+
                 Spacer()
-                Button("Scan Card") { tagScanner.beginScanning() }
-                    .padding()
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                    .padding(.horizontal, 60)
+
+//                Button(action: { tagScanner.beginScanning() }) {
+//                    Text("Scan Card")
+//                        .font(.headline)
+//                        .foregroundColor(.white)
+//                        .frame(maxWidth: 250)
+//                        .padding(.vertical, 18)
+//                        .background(Color.white.opacity(0.5))
+//                        .cornerRadius(20)
+//                }
+                Button(action: { tagScanner.beginScanning() }) {
+                                   Text("Scan Card")
+                                       .font(.headline)
+                                       .frame(maxWidth: 250)
+                                       .padding(.vertical, 18)
+                                       .background(Color.white)
+                                       .foregroundColor(.black)
+                                       .cornerRadius(30)
+                                       .shadow(radius: 4)
+                               }
+                .padding(.horizontal, 20)
+
                 if !lastTagData.isEmpty {
                     Text("Last scanned: \(lastTagData)")
                         .font(.caption2)
                         .foregroundColor(.white)
                 }
+
                 Spacer()
+
                 animatedClueLabels(count: 4, lit: nfcScannedClues)
             }
         }
@@ -150,7 +173,7 @@ struct ScannerContainerView: View {
     }
 
     private func animatedClueLabels(count: Int, lit: Set<Int>) -> some View {
-        HStack(spacing: 30) {
+        HStack(spacing: 30) { // tweak this spacing to spread the dots out
             ForEach(1...count, id: \.self) { idx in
                 VStack(spacing: 4) {
                     Text("\(idx)")
@@ -175,11 +198,8 @@ struct ScannerContainerView: View {
                                 lineWidth: 1
                             ))
                         )
-                        .scaleEffect(lit.contains(idx) ? 1.2 : 1.0)
-                        .rotationEffect(.degrees(lit.contains(idx) ? 360 : 0))
                         .shadow(color: lit.contains(idx) ? .green.opacity(0.6) : .clear,
                                 radius: lit.contains(idx) ? 8 : 0)
-
                     Text("Clue")
                         .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundColor(lit.contains(idx) ? .green : .gray)
@@ -191,7 +211,7 @@ struct ScannerContainerView: View {
                            value: lit.contains(idx))
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 20)  // same padding as “Scan Card” above
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 20)
