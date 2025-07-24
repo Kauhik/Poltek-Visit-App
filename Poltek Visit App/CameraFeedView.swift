@@ -42,8 +42,14 @@ struct CameraFeedView: View {
 
     // MARK: — thresholds
     private let baseThreshold:    VNConfidence = 0.80  // default for most clues
-    private let ezlinkThreshold:  VNConfidence = 0.87 // higher bar for Ezlink
-    private let merlionThreshold: VNConfidence = 0.85// higher bar for Merlion
+    private let ezlinkThreshold:  VNConfidence = 0.96  // higher bar for Ezlink
+    private let merlionThreshold: VNConfidence = 0.96  // higher bar for Merlion
+
+    // MARK: — consecutive‐hit counters & required hits
+    @State private var ezlinkHitCount: Int = 0
+    @State private var merlionHitCount: Int = 0
+    private let ezlinkRequiredHits = 8
+    private let merlionRequiredHits = 8
 
     var body: some View {
         ZStack {
@@ -52,51 +58,11 @@ struct CameraFeedView: View {
 
             VStack {
                 if showScannedToast {
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                            .font(.system(size: 20, weight: .semibold))
-                        Text("Clue scanned!")
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showScannedToast)
-                    .padding(.top, 60)
+                    scanToast(image: "checkmark.circle.fill", color: .green, text: "Clue scanned!")
                 }
 
                 if showToast {
-                    HStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.orange)
-                            .font(.system(size: 20, weight: .semibold))
-                        Text("Try again")
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundColor(.black)
-                    }
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(.ultraThinMaterial)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                            )
-                    )
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showToast)
-                    .padding(.top, 60)
+                    scanToast(image: "exclamationmark.triangle.fill", color: .orange, text: "Try again")
                 }
 
                 Spacer()
@@ -104,10 +70,9 @@ struct CameraFeedView: View {
                 // Clue boxes above the button
                 detectionLabelsView()
 
+                // Capture button below the clue boxes — now triggers a batch of 5 captures
                 Button(action: {
-                    if let buffer = bufferExchange.pixelBuffer {
-                        classify(buffer: buffer)
-                    }
+                    captureFramesBatch()
                 }) {
                     Text("Capture")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -132,6 +97,43 @@ struct CameraFeedView: View {
         }
         .onAppear { configureSession() }
         .onDisappear { session.stopRunning() }
+    }
+
+    /// Take 5 frames in sequence to reduce false positives
+    private func captureFramesBatch() {
+        let batchCount = max(ezlinkRequiredHits, merlionRequiredHits)
+        for i in 0..<batchCount {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.2) {
+                if let buffer = bufferExchange.pixelBuffer {
+                    classify(buffer: buffer)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func scanToast(image: String, color: Color, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: image)
+                .foregroundColor(color)
+                .font(.system(size: 20, weight: .semibold))
+            Text(text)
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundColor(.black)
+        }
+        .padding(.horizontal, 30)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .animation(.spring(response: 0.5, dampingFraction: 0.8), value: showScannedToast || showToast)
+        .padding(.top, 60)
     }
 
     private func detectionLabelsView() -> some View {
@@ -184,8 +186,6 @@ struct CameraFeedView: View {
                                 )
                         )
                 )
-                .scaleEffect(done ? 1.2 : 1.0)
-                .rotationEffect(.degrees(done ? 360 : 0))
                 .animation(.spring(response: 0.6, dampingFraction: 0.7)
                             .delay(Double(number) * 0.05),
                            value: done)
@@ -248,7 +248,7 @@ struct CameraFeedView: View {
 
                 let label = top.identifier
                 let conf  = top.confidence
-
+                
                 // pick the right threshold per label
                 let thresh: VNConfidence
                 switch label {
@@ -261,25 +261,42 @@ struct CameraFeedView: View {
                 }
 
                 DispatchQueue.main.async {
-                    if conf >= thresh {
-                        if discovered[label] == false {
-                            discovered[label] = true
-                            saveDiscovered()
-                            if discovered.values.allSatisfy({ $0 }) {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                    onAllDetected()
-                                }
-                            }
+                    switch label {
+                    case "Ezlink":
+                        // consecutive detection logic
+                        if conf >= thresh {
+                            ezlinkHitCount += 1
                         } else {
-                            showScannedToast = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                showScannedToast = false
-                            }
+                            ezlinkHitCount = 0
                         }
-                    } else {
-                        showToast = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            showToast = false
+                        merlionHitCount = 0
+                        if ezlinkHitCount >= ezlinkRequiredHits {
+                            ezlinkHitCount = 0
+                            handleDetection(label: label)
+                        }
+
+                    case "Merlion":
+                        if conf >= thresh {
+                            merlionHitCount += 1
+                        } else {
+                            merlionHitCount = 0
+                        }
+                        ezlinkHitCount = 0
+                        if merlionHitCount >= merlionRequiredHits {
+                            merlionHitCount = 0
+                            handleDetection(label: label)
+                        }
+
+                    default:
+                        ezlinkHitCount = 0
+                        merlionHitCount = 0
+                        if conf >= thresh {
+                            handleDetection(label: label)
+                        } else {
+                            showToast = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                showToast = false
+                            }
                         }
                     }
                 }
@@ -288,6 +305,24 @@ struct CameraFeedView: View {
         }
 
         session.startRunning()
+    }
+
+    /// common detection handler
+    private func handleDetection(label: String) {
+        if discovered[label] == false {
+            discovered[label] = true
+            saveDiscovered()
+            if discovered.values.allSatisfy({ $0 }) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    onAllDetected()
+                }
+            }
+        } else {
+            showScannedToast = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                showScannedToast = false
+            }
+        }
     }
 
     private func classify(buffer: CVPixelBuffer) {
