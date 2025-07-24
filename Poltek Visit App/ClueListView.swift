@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ClueListView: View {
+    /// This now shows the actual locker number (passed from ContentView)
     let teamNumber:          String
     let unlockedLetters:     Set<String>
     let pin:                 String
@@ -23,39 +24,24 @@ struct ClueListView: View {
 
     var body: some View {
         ZStack {
+            // Background image
             Image("Background")
                 .resizable()
                 .scaledToFill()
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 24) {
-                    Spacer().frame(height: 80)
+            VStack {
+                Spacer(minLength: 80) // clear the notch
 
+                // MARK: – Card container
+                VStack(spacing: 24) {
+                    // Header
                     Text("Work together to unlock all codes")
-                        .font(.headline)
+                        .font(.system(size: 25, weight: .bold))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
 
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(allLetters, id: \.self) { letter in
-                            CodeTile(
-                                letter:   letter,
-                                unlocked: unlockedLetters.contains(letter),
-                                digit:    codeMap[letter] ?? "?"
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 24)
-
-                    CodeTile(
-                        letter:   combinationUnlocked ? "ABCD" : nil,
-                        unlocked: combinationUnlocked,
-                        digit:    combinationUnlocked ? combinationString : ""
-                    )
-                    .frame(height: 100)
-                    .padding(.horizontal, 24)
-
+                    // Locker number
                     VStack(spacing: 8) {
                         Text("Your locker number")
                             .font(.subheadline)
@@ -68,9 +54,35 @@ struct ClueListView: View {
                     .cornerRadius(20)
                     .padding(.horizontal, 24)
 
-                    Button {
-                        onScan()
-                    } label: {
+                    // 2×2 code grid
+                    LazyVGrid(columns: columns, spacing: 16) {
+                        ForEach(allLetters, id: \.self) { letter in
+                            CodeTile(
+                                letter:   letter,
+                                unlocked: unlockedLetters.contains(letter),
+                                digit:    codeMap[letter] ?? "?"
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+
+                    // Full‑width combination tile
+                    CodeTile(
+                        letter:   combinationUnlocked ? "ABCD" : nil,
+                        unlocked: combinationUnlocked,
+                        digit:    combinationUnlocked ? combinationString : ""
+                    )
+                    .frame(height: 100)
+                    .padding(.horizontal, 24)
+
+                    // Instruction text
+                    Text("Scan the clues at the Academy")
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+
+                    // Scan button
+                    Button(action: onScan) {
                         Text("Scan Clue")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
@@ -79,17 +91,20 @@ struct ClueListView: View {
                             .foregroundColor(.white)
                             .cornerRadius(30)
                     }
-                    .contentShape(Rectangle())
                     .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
                 }
-                .padding(.vertical, 32)
+                .padding(.top, 16)
                 .background(.ultraThinMaterial)
                 .cornerRadius(20)
+                .padding(.horizontal, 16)
+
+                Spacer() // center vertically
             }
-            .scrollContentBackground(.hidden)
         }
     }
 
+    // Build a map from each letter to its digit in the PIN.
     private var codeMap: [String:String] {
         var m = [String:String]()
         for letter in allLetters {
@@ -101,6 +116,7 @@ struct ClueListView: View {
         return m
     }
 
+    // When all four letters are unlocked, show them in the correct order.
     private var combinationString: String {
         allLetters
             .sorted { letterIndices[$0]! < letterIndices[$1]! }
@@ -126,7 +142,7 @@ struct CodeTile: View {
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
-                        )
+                          )
                         : AnyShapeStyle(Color.gray.opacity(0.3))
                 )
 
@@ -141,12 +157,13 @@ struct CodeTile: View {
                         .foregroundColor(.gray)
                 }
 
-                // Only show "Code X" for single-letter tiles
+                // Only show "Code X" for the single‑letter tiles
                 if let letter = letter, letter.count == 1 {
                     Text("Code \(letter)")
                         .font(.subheadline)
                         .foregroundColor(unlocked ? .white : .gray)
                 }
+                // No label under the full‑width tile
             }
         }
         .frame(height: 100)
