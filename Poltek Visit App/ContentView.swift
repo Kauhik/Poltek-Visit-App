@@ -10,7 +10,7 @@
 import SwiftUI
 import SwiftData
 
-enum Page {
+enum Page: String, Codable {
     case teamEntry, clueGrid, scanner
     case puzzleSelect, puzzleWords, puzzleHolidays, puzzleDailyLife, puzzleDailyFood, puzzlePlaces
     case codeReveal
@@ -20,6 +20,9 @@ struct ContentView: View {
     // MARK: — SwiftData bindings
     @Query private var settings: [TeamSetting]
     @Environment(\.modelContext) private var modelContext
+
+    // Persist last page across launches
+    @AppStorage("PoltekVisit_LastPage") private var lastPageRaw: String = Page.teamEntry.rawValue
 
     private var teamSetting: TeamSetting {
         if let existing = settings.first {
@@ -32,7 +35,11 @@ struct ContentView: View {
     }
 
     // MARK: — Navigation
-    @State private var currentPage: Page = .teamEntry
+    @State private var currentPage: Page = .teamEntry {
+        didSet {
+            lastPageRaw = currentPage.rawValue
+        }
+    }
 
     // MARK: — Persistent state
     @State private var qrScannedClues: Set<Int> = []
@@ -41,9 +48,7 @@ struct ContentView: View {
     @State private var completedScanTabs: Set<ScannerContainerView.Tab> = []
 
     // MARK: — Ephemeral (but persisted) state
-    @State private var usageLeft: [ScanTech: Int] = Dictionary(
-        uniqueKeysWithValues: ScanTech.allCases.map { ($0, $0.maxUses) }
-    )
+    @State private var usageLeft: [ScanTech: Int] = [:]
     @State private var unlockedLetters: [String] = []
     @State private var combinationUnlocked: Bool = false
     @State private var letterIndices: [String: Int] = [:]
@@ -61,13 +66,10 @@ struct ContentView: View {
     var body: some View {
         content
             .onAppear(perform: restoreState)
-            // persist all four clue sets
             .onChange(of: qrScannedClues)     { teamSetting.qrClues       = Array($0) }
             .onChange(of: nfcScannedClues)    { teamSetting.nfcClues      = Array($0) }
             .onChange(of: listenScannedClues) { teamSetting.listenClues   = Array($0) }
-            // persist tabs & puzzles
             .onChange(of: completedScanTabs)  { teamSetting.completedTabs = $0.map { $0.rawValue } }
-            // persist grid unlocks
             .onChange(of: unlockedLetters)    { teamSetting.unlockedLetters    = $0 }
             .onChange(of: combinationUnlocked){ teamSetting.combinationUnlocked = $0 }
             .onChange(of: letterIndices)      { teamSetting.letterIndices      = $0 }
@@ -110,7 +112,7 @@ struct ContentView: View {
                 listenScannedClues:  $listenScannedClues,
                 usageLeft:           usageLeft,
                 onBack:              { currentPage = .clueGrid },
-                onNext:              { tech in
+                onNext: { tech in
                     usageLeft[tech] = max((usageLeft[tech] ?? 0) - 1, 0)
                     completedScanTabs.insert(scannerSelectedTab)
                     currentPuzzle = nil
@@ -185,25 +187,18 @@ struct ContentView: View {
 
         case .codeReveal:
             let pin = teamInfo?.pin ?? ""
-            if combinationUnlocked {
-                CodeView(code: "", codeLabel: "Click Done") {
-                    currentPage = .clueGrid
-                }
-            } else if
-                let last = unlockedLetters.last,
-                let idx  = letterIndices[last],
-                idx < pin.count
-            {
-                let digit = String(
-                    pin[pin.index(pin.startIndex, offsetBy: idx)]
-                )
-                CodeView(code: digit, codeLabel: "Code \(last)") {
-                    currentPage = .clueGrid
-                }
-            } else {
-                CodeView(code: "0", codeLabel: "Code") {
-                    currentPage = .clueGrid
-                }
+            CodeView(
+                code: combinationUnlocked ? "" :
+                      (unlockedLetters.last.flatMap {
+                        String(pin[pin.index(pin.startIndex,
+                                             offsetBy: letterIndices[$0]!)]
+                        )
+                      } ?? "0"),
+                codeLabel: combinationUnlocked
+                           ? "Click Done"
+                           : (unlockedLetters.last.map { "Code \($0)" } ?? "Code")
+            ) {
+                currentPage = .clueGrid
             }
         }
     }
@@ -244,7 +239,14 @@ struct ContentView: View {
             .puzzleWords, .puzzleHolidays, .puzzleDailyLife,
             .puzzleDailyFood, .puzzlePlaces
         ]
-        currentPage = .clueGrid
+
+        // Restore last page if it was a puzzle page
+        if let saved = Page(rawValue: lastPageRaw),
+           saved != .teamEntry && saved != .clueGrid && saved != .scanner {
+            currentPage = saved
+        } else {
+            currentPage = .clueGrid
+        }
     }
 
     private func resetSession() {
@@ -272,19 +274,6 @@ struct ContentView: View {
         ]
         currentPuzzle = nil
         scannerSelectedTab = .qr
-
-        // Clear persisted MoveClassifierView detection flags
-        UserDefaults.standard.removeObject(
-            forKey: "MoveClassifierView.detectedSG"
-        )
-        UserDefaults.standard.removeObject(
-            forKey: "MoveClassifierView.detectedID"
-        )
-
-        // Clear persisted NFC clues
-        UserDefaults.standard.removeObject(
-            forKey: "ScannerContainerView.nfcScannedClues"
-        )
     }
 
     private func advanceUnlock() {

@@ -5,19 +5,18 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
-
 import SwiftUI
 
 struct ClueListView: View {
-    let teamNumber:            String
-    let unlockedLetters:       Set<String>
-    let pin:                   String
-    let letterIndices:         [String: Int]
-    let combinationUnlocked:   Bool
-    var onScan:               () -> Void
+    let teamNumber:          String
+    let unlockedLetters:     Set<String>
+    let pin:                 String
+    let letterIndices:       [String: Int]
+    let combinationUnlocked: Bool
+    var onScan:              () -> Void
 
     private let allLetters = ["A","B","C","D"]
-    private let columns    = [
+    private let columns = [
         GridItem(.flexible(), spacing: 16),
         GridItem(.flexible(), spacing: 16)
     ]
@@ -109,9 +108,9 @@ struct ClueListView: View {
     }
 }
 
-/// A single “code” tile (A, B, C, D, or “All Codes”)
+/// A single “code” tile (A, B, C, D, or full‑width for the combination)
 struct CodeTile: View {
-    /// "A" / "B" / "C" / "D" or nil for the full‑width tile
+    /// "A" / "B" / "C" / "D" or nil for the full‑width combination tile
     let letter:   String?
     let unlocked: Bool
     let digit:    String?
@@ -123,11 +122,11 @@ struct CodeTile: View {
                     unlocked
                         ? AnyShapeStyle(
                             LinearGradient(
-                              gradient: Gradient(colors: [Color.orange, Color.pink]),
-                              startPoint: .topLeading,
-                              endPoint: .bottomTrailing
+                                gradient: Gradient(colors: [Color.orange, Color.pink]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                          )
+                        )
                         : AnyShapeStyle(Color.gray.opacity(0.3))
                 )
 
@@ -142,14 +141,11 @@ struct CodeTile: View {
                         .foregroundColor(.gray)
                 }
 
-                if let letter = letter {
+                // Only show "Code X" for single-letter tiles
+                if let letter = letter, letter.count == 1 {
                     Text("Code \(letter)")
                         .font(.subheadline)
                         .foregroundColor(unlocked ? .white : .gray)
-                } else {
-                    Text("All Codes")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
                 }
             }
         }
