@@ -8,6 +8,7 @@
 import Foundation
 
 struct TeamInfo {
+    let locker: String
     let pin: String
     let combination: String
 }
@@ -20,19 +21,32 @@ final class TeamCodes {
 
     private func loadCSV() {
         guard let url = Bundle.main.url(forResource: "team_codes", withExtension: "csv") else {
-            print("❌ team_codes.csv not found")
+            print("team_codes.csv not found")
             return
         }
         do {
             let text = try String(contentsOf: url)
-            let lines = text.split(whereSeparator: \.isNewline).map(String.init)
+            let lines = text
+                .split(whereSeparator: \.isNewline)
+                .map(String.init)
+
             for line in lines.dropFirst() {
                 let cols = line.split(separator: ",").map(String.init)
-                guard cols.count >= 3, let team = Int(cols[0]) else { continue }
-                codes[team] = TeamInfo(pin: cols[1], combination: cols[2])
+                guard cols.count >= 4,
+                      let team = Int(cols[0]) else {
+                    continue
+                }
+                let locker     = cols[1]
+                let pin        = cols[2]
+                let combination = cols[3]
+                codes[team] = TeamInfo(
+                    locker:     locker,
+                    pin:        pin,
+                    combination: combination
+                )
             }
         } catch {
-            print("❌ CSV read error:", error)
+            print("CSV read error:", error)
         }
     }
 

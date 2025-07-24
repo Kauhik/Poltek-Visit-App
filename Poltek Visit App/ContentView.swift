@@ -91,7 +91,7 @@ struct ContentView: View {
 
         case .clueGrid:
             ClueListView(
-                teamNumber:          teamSetting.teamNumber,
+                teamNumber:          teamInfo?.locker ?? teamSetting.teamNumber,
                 unlockedLetters:     Set(unlockedLetters),
                 pin:                 teamInfo?.pin ?? "",
                 letterIndices:       letterIndices,
@@ -250,11 +250,11 @@ struct ContentView: View {
     }
 
     private func resetSession() {
-        qrScannedClues     = []
-        nfcScannedClues    = []
-        listenScannedClues = []
-        completedScanTabs  = []
-        unlockedLetters    = []
+        qrScannedClues      = []
+        nfcScannedClues     = []
+        listenScannedClues  = []
+        completedScanTabs   = []
+        unlockedLetters     = []
         combinationUnlocked = false
 
         usageLeft = Dictionary(
