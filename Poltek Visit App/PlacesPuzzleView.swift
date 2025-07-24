@@ -18,18 +18,9 @@ struct PlacesPuzzleView: View {
     @State private var selection: String? = nil
     @State private var correctCount = 0
 
-    private func flagEmoji(for country: String) -> String {
-        switch country {
-        case "Singapore": return "🇸🇬"
-        case "Indonesia": return "🇮🇩"
-        default:          return "❓"
-        }
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
-                // full‑bleed gradient
                 LinearGradient(
                     gradient: Gradient(colors: [
                         Color(red: 1.0, green: 0.95, blue: 0.8),
@@ -56,21 +47,34 @@ struct PlacesPuzzleView: View {
                     .padding(.horizontal)
 
                     if currentIndex < items.count {
-                        // Landmark image
-                        Image(items[currentIndex].name)
+                        let place = items[currentIndex]
+                        let isWrong = selection != nil && selection != place.origin
+                        let isCorrect = selection != nil && selection == place.origin
+
+                        Image(place.name)
                             .resizable()
                             .scaledToFill()
                             .frame(width: 350, height: 300)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red, lineWidth: 8)
+                                    .opacity(isWrong ? 1 : 0)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.green, lineWidth: 8)
+                                    .opacity(isCorrect ? 1 : 0)
+                            )
+                            .animation(.easeInOut(duration: 0.3), value: isWrong || isCorrect)
                             .padding()
 
-                        // Flag buttons
                         HStack(spacing: 24) {
                             ForEach(["Singapore", "Indonesia"], id: \.self) { country in
                                 Button {
                                     guard selection == nil else { return }
                                     selection = country
-                                    if items[currentIndex].origin == country {
+                                    if place.origin == country {
                                         correctCount += 1
                                     }
                                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -94,8 +98,8 @@ struct PlacesPuzzleView: View {
                                 .disabled(selection != nil)
                             }
                         }
+
                     } else {
-                        // Retry state
                         Text("You got \(correctCount) / 5 correct.\nTry again!")
                             .multilineTextAlignment(.center)
                             .padding()
@@ -109,14 +113,22 @@ struct PlacesPuzzleView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Back", action: onBack)
-                }
+                ToolbarItem(placement: .navigationBarLeading) { }
             }
         }
         .onReceive(data.$pairs) { all in
             guard all.count >= 5 else { return }
             startQuiz(with: all)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func flagEmoji(for country: String) -> String {
+        switch country {
+        case "Singapore": return "🇸🇬"
+        case "Indonesia":  return "🇮🇩"
+        default:           return "?"
         }
     }
 
@@ -138,5 +150,11 @@ struct PlacesPuzzleView: View {
 
     private func resetQuiz() {
         startQuiz(with: data.pairs)
+    }
+}
+
+struct PlacesPuzzleView_Previews: PreviewProvider {
+    static var previews: some View {
+        PlacesPuzzleView(onComplete: {}, onBack: {})
     }
 }

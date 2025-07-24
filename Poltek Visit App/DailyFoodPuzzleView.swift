@@ -19,7 +19,7 @@ struct DailyFoodPuzzleView: View {
     @State private var selection: String? = nil
     @State private var correctCount = 0
 
-    // Number of correct answers required to finish
+    /// Number of correct answers required to finish
     private let requiredCorrect = 5
 
     var body: some View {
@@ -52,19 +52,29 @@ struct DailyFoodPuzzleView: View {
 
                     Spacer()
 
-                    // Once enough correct answers → complete
                     if correctCount >= requiredCorrect {
                         Color.clear
-
-                    // Show next food image
                     } else if currentIndex < items.count {
                         let pair = items[currentIndex]
+                        let isWrong = selection != nil && selection != pair.origin
+                        let isCorrect = selection != nil && selection == pair.origin
 
                         Image(pair.word)
                             .resizable()
                             .scaledToFill()
                             .frame(width: 350, height: 300)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.red, lineWidth: 8)
+                                    .opacity(isWrong ? 1 : 0)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.green, lineWidth: 8)
+                                    .opacity(isCorrect ? 1 : 0)
+                            )
+                            .animation(.easeInOut(duration: 0.3), value: isWrong || isCorrect)
                             .padding()
 
                         HStack(spacing: 40) {
@@ -98,7 +108,6 @@ struct DailyFoodPuzzleView: View {
                             }
                         }
 
-                    // Out of items & not enough correct → retry
                     } else {
                         VStack(spacing: 16) {
                             Text("You got \(correctCount) / \(items.count) correct.\nTry again!")
@@ -112,9 +121,7 @@ struct DailyFoodPuzzleView: View {
                     Spacer()
                 }
                 .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-//                        Button("Back", action: onBack)
-                    }
+                    ToolbarItem(placement: .navigationBarLeading) { }
                 }
                 .onReceive(data.$pairs) { all in
                     startQuiz(with: all)
@@ -128,8 +135,8 @@ struct DailyFoodPuzzleView: View {
     private func flagEmoji(for country: String) -> String {
         switch country {
         case "Singapore": return "🇸🇬"
-        case "Indonesia": return "🇮🇩"
-        default:          return "?"
+        case "Indonesia":  return "🇮🇩"
+        default:           return "?"
         }
     }
 
