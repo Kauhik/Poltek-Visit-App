@@ -21,6 +21,10 @@ struct ScannerContainerView: View {
 
     @State private var lastTagData: String = ""
     @State private var didFinishCurrent = false
+
+    @State private var showScannedToast = false
+    @State private var showWrongToast   = false
+
     @StateObject private var tagScanner = TagScanner()
     @Namespace private var clueAnimation
 
@@ -38,6 +42,57 @@ struct ScannerContainerView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 contentBody().ignoresSafeArea(edges: .all)
+
+                if showScannedToast {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 20, weight: .semibold))
+                        Text("Clue scanned!")
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8),
+                               value: showScannedToast)
+                    .padding(.top, 60)
+                }
+
+                if showWrongToast {
+                    HStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 20, weight: .semibold))
+                        Text("Wrong QR code")
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 30)
+                    .padding(.vertical, 16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(.ultraThinMaterial)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.spring(response: 0.5, dampingFraction: 0.8),
+                               value: showWrongToast)
+                    .padding(.top, 60)
+                }
+
                 overlayBackButton()
             }
             .navigationBarHidden(true)
@@ -71,21 +126,36 @@ struct ScannerContainerView: View {
     private var qrView: some View {
         ZStack {
             QRScannerView { code in
-                guard !didFinishCurrent,
-                      let idx = qrClueURLs.firstIndex(of: code)
-                else { return }
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                    qrScannedClues.insert(idx + 1)
-                }
-                if qrScannedClues.count == qrClueURLs.count {
-                    finish(.camera)
+                // ignore while finishing
+                guard !didFinishCurrent else { return }
+
+                if let idx = qrClueURLs.firstIndex(of: code) {
+                    // ── valid QR ───────────────────────────────────────────────
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                        qrScannedClues.insert(idx + 1)
+                        showScannedToast = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showScannedToast = false
+                    }
+                    if qrScannedClues.count == qrClueURLs.count {
+                        finish(.camera)
+                    }
+                } else {
+                    // ── wrong QR ───────────────────────────────────────────────
+                    withAnimation {
+                        showWrongToast = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showWrongToast = false
+                    }
                 }
             }
             VStack {
                 Spacer()
-                // Clue box (scaled to match camera view sizing)
+                // Clue box (scaled to match camera sizing)
                 animatedClueLabels(count: qrClueURLs.count, lit: qrScannedClues)
-                  .scaleEffect(0.85)
+                    .scaleEffect(0.85)
             }
         }
     }
@@ -93,7 +163,6 @@ struct ScannerContainerView: View {
     private var scanView: some View {
         CameraFeedView(onAllDetected: { finish(.camera) },
                        onNext:        { finish(.camera) })
-        // — in CameraFeedView.swift, locate your capture button and darken its background opacity
     }
 
     private var listenView: some View {
@@ -112,46 +181,29 @@ struct ScannerContainerView: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 16) {
                 Spacer()
-
                 Image(systemName: "wave.3.right")
                     .font(.system(size: 80))
                     .foregroundColor(.white)
-
                 Text("Hold near a NFC Card")
                     .font(.headline)
                     .foregroundColor(.white)
-
                 Spacer()
-
-//                Button(action: { tagScanner.beginScanning() }) {
-//                    Text("Scan Card")
-//                        .font(.headline)
-//                        .foregroundColor(.white)
-//                        .frame(maxWidth: 250)
-//                        .padding(.vertical, 18)
-//                        .background(Color.white.opacity(0.5))
-//                        .cornerRadius(20)
-//                }
                 Button(action: { tagScanner.beginScanning() }) {
-                                   Text("Scan Card")
-                                       .font(.headline)
-                                       .frame(maxWidth: 250)
-                                       .padding(.vertical, 18)
-                                       .background(Color.white)
-                                       .foregroundColor(.black)
-                                       .cornerRadius(30)
-                                       .shadow(radius: 4)
-                               }
+                    Text("Scan Card")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: 250)
+                        .padding(.vertical, 18)
+                        .background(Color.white.opacity(0.5))
+                        .cornerRadius(20)
+                }
                 .padding(.horizontal, 20)
-
                 if !lastTagData.isEmpty {
                     Text("Last scanned: \(lastTagData)")
                         .font(.caption2)
                         .foregroundColor(.white)
                 }
-
                 Spacer()
-
                 animatedClueLabels(count: 4, lit: nfcScannedClues)
             }
         }
@@ -173,7 +225,7 @@ struct ScannerContainerView: View {
     }
 
     private func animatedClueLabels(count: Int, lit: Set<Int>) -> some View {
-        HStack(spacing: 30) { // tweak this spacing to spread the dots out
+        HStack(spacing: 16) {
             ForEach(1...count, id: \.self) { idx in
                 VStack(spacing: 4) {
                     Text("\(idx)")
@@ -211,7 +263,7 @@ struct ScannerContainerView: View {
                            value: lit.contains(idx))
             }
         }
-        .padding(.horizontal, 20)  // same padding as “Scan Card” above
+        .padding(.horizontal, 20)
         .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 20)

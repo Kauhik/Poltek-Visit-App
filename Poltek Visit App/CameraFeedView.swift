@@ -5,6 +5,7 @@
 //  Created by Kaushik Manian on 30/6/25.
 //
 
+
 import SwiftUI
 import AVFoundation
 import Vision
@@ -39,8 +40,10 @@ struct CameraFeedView: View {
     @State private var showToast = false
     @State private var showScannedToast = false
 
-    private let baseThreshold: VNConfidence = 0.8
-    private let specialThreshold: VNConfidence = 0.9
+    // MARK: — thresholds
+    private let baseThreshold:    VNConfidence = 0.80  // default for most clues
+    private let ezlinkThreshold:  VNConfidence = 0.87 // higher bar for Ezlink
+    private let merlionThreshold: VNConfidence = 0.85// higher bar for Merlion
 
     var body: some View {
         ZStack {
@@ -101,7 +104,6 @@ struct CameraFeedView: View {
                 // Clue boxes above the button
                 detectionLabelsView()
 
-                // Capture button below the clue boxes
                 Button(action: {
                     if let buffer = bufferExchange.pixelBuffer {
                         classify(buffer: buffer)
@@ -232,24 +234,31 @@ struct CameraFeedView: View {
         let output = AVCaptureVideoDataOutput()
         output.setSampleBufferDelegate(bufferExchange,
                                        queue: DispatchQueue(label: "VideoBuffer"))
-
         if session.canAddOutput(output) {
             session.addOutput(output)
         }
-
         session.commitConfiguration()
 
         if let mlModel = try? VNCoreMLModel(for: PoltekImagesClassification_1().model) {
             classificationRequest = VNCoreMLRequest(model: mlModel) { request, _ in
                 guard
                     let results = request.results as? [VNClassificationObservation],
-                    let top = results.first
+                    let top     = results.first
                 else { return }
 
                 let label = top.identifier
                 let conf  = top.confidence
-                let thresh: VNConfidence =
-                    (label == "Ezlink") ? specialThreshold : baseThreshold
+
+                // pick the right threshold per label
+                let thresh: VNConfidence
+                switch label {
+                case "Ezlink":
+                    thresh = ezlinkThreshold
+                case "Merlion":
+                    thresh = merlionThreshold
+                default:
+                    thresh = baseThreshold
+                }
 
                 DispatchQueue.main.async {
                     if conf >= thresh {
