@@ -38,6 +38,29 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				"Poltek Assests/Camera View/Clue 1.png",
+				"Poltek Assests/Camera View/Clue 2.png",
+				"Poltek Assests/Camera View/Clue 4.png",
+				"Poltek Assests/Camera View/Clues 3.png",
+				"Poltek Assests/Listen View/Campina Ice Cream song-[AudioTrimmer.com] copy.mp3",
+				"Poltek Assests/Listen View/Campina.png",
+				"Poltek Assests/Listen View/Ice Cream Walls Original Jingle-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/Singapore Crossing.png",
+				"Poltek Assests/Listen View/Singapore Pedestrian Crossing Button-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/SMRT Doors Closing-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/SMRT Dorr Closing.png",
+				"Poltek Assests/Listen View/Suara Es Krim Wall's Keliling.png",
+				"Poltek Assests/Move/ID.MOV",
+				"Poltek Assests/Move/SG.MOV",
+				"Poltek Assests/NFC/Upload to NFC.png",
+				"Poltek Assests/QR Codes/Clue 1.png",
+				"Poltek Assests/QR Codes/Clue 2.png",
+				"Poltek Assests/QR Codes/Clue 3.png",
+				"Poltek Assests/QR Codes/Clue 4.png",
+				"Poltek Assests/QR Codes/Clue 5.png",
+				"Poltek Assests/QR Codes/Raw Values.png",
+				"Poltek Assests/Singaporean Attendees Final.numbers",
+				"Poltek Assests/team_codes.numbers",
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
@@ -53,6 +76,29 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
+				"Poltek Assests/Camera View/Clue 1.png",
+				"Poltek Assests/Camera View/Clue 2.png",
+				"Poltek Assests/Camera View/Clue 4.png",
+				"Poltek Assests/Camera View/Clues 3.png",
+				"Poltek Assests/Listen View/Campina Ice Cream song-[AudioTrimmer.com] copy.mp3",
+				"Poltek Assests/Listen View/Campina.png",
+				"Poltek Assests/Listen View/Ice Cream Walls Original Jingle-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/Singapore Crossing.png",
+				"Poltek Assests/Listen View/Singapore Pedestrian Crossing Button-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/SMRT Doors Closing-[AudioTrimmer.com].mp3",
+				"Poltek Assests/Listen View/SMRT Dorr Closing.png",
+				"Poltek Assests/Listen View/Suara Es Krim Wall's Keliling.png",
+				"Poltek Assests/Move/ID.MOV",
+				"Poltek Assests/Move/SG.MOV",
+				"Poltek Assests/NFC/Upload to NFC.png",
+				"Poltek Assests/QR Codes/Clue 1.png",
+				"Poltek Assests/QR Codes/Clue 2.png",
+				"Poltek Assests/QR Codes/Clue 3.png",
+				"Poltek Assests/QR Codes/Clue 4.png",
+				"Poltek Assests/QR Codes/Clue 5.png",
+				"Poltek Assests/QR Codes/Raw Values.png",
+				"Poltek Assests/Singaporean Attendees Final.numbers",
+				"Poltek Assests/team_codes.numbers",
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
@@ -432,7 +478,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Poltek Visit App/Poltek Visit App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"Poltek Visit App/Preview Content\"";
 				DEVELOPMENT_TEAM = Z8PS8WLYZ6;
 				ENABLE_PREVIEWS = YES;
@@ -467,7 +513,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Poltek Visit App/Poltek Visit App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"Poltek Visit App/Preview Content\"";
 				DEVELOPMENT_TEAM = Z8PS8WLYZ6;
 				ENABLE_PREVIEWS = YES;
