@@ -38,29 +38,6 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
-				"Poltek Assests/Camera View/Clue 1.png",
-				"Poltek Assests/Camera View/Clue 2.png",
-				"Poltek Assests/Camera View/Clue 4.png",
-				"Poltek Assests/Camera View/Clues 3.png",
-				"Poltek Assests/Listen View/Campina Ice Cream song-[AudioTrimmer.com] copy.mp3",
-				"Poltek Assests/Listen View/Campina.png",
-				"Poltek Assests/Listen View/Ice Cream Walls Original Jingle-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/Singapore Crossing.png",
-				"Poltek Assests/Listen View/Singapore Pedestrian Crossing Button-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/SMRT Doors Closing-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/SMRT Dorr Closing.png",
-				"Poltek Assests/Listen View/Suara Es Krim Wall's Keliling.png",
-				"Poltek Assests/Move/ID.MOV",
-				"Poltek Assests/Move/SG.MOV",
-				"Poltek Assests/NFC/Upload to NFC.png",
-				"Poltek Assests/QR Codes/Clue 1.png",
-				"Poltek Assests/QR Codes/Clue 2.png",
-				"Poltek Assests/QR Codes/Clue 3.png",
-				"Poltek Assests/QR Codes/Clue 4.png",
-				"Poltek Assests/QR Codes/Clue 5.png",
-				"Poltek Assests/QR Codes/Raw Values.png",
-				"Poltek Assests/Singaporean Attendees Final.numbers",
-				"Poltek Assests/team_codes.numbers",
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
@@ -76,29 +53,6 @@
 				Dailylife.csv,
 				Holidays.csv,
 				Places.csv,
-				"Poltek Assests/Camera View/Clue 1.png",
-				"Poltek Assests/Camera View/Clue 2.png",
-				"Poltek Assests/Camera View/Clue 4.png",
-				"Poltek Assests/Camera View/Clues 3.png",
-				"Poltek Assests/Listen View/Campina Ice Cream song-[AudioTrimmer.com] copy.mp3",
-				"Poltek Assests/Listen View/Campina.png",
-				"Poltek Assests/Listen View/Ice Cream Walls Original Jingle-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/Singapore Crossing.png",
-				"Poltek Assests/Listen View/Singapore Pedestrian Crossing Button-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/SMRT Doors Closing-[AudioTrimmer.com].mp3",
-				"Poltek Assests/Listen View/SMRT Dorr Closing.png",
-				"Poltek Assests/Listen View/Suara Es Krim Wall's Keliling.png",
-				"Poltek Assests/Move/ID.MOV",
-				"Poltek Assests/Move/SG.MOV",
-				"Poltek Assests/NFC/Upload to NFC.png",
-				"Poltek Assests/QR Codes/Clue 1.png",
-				"Poltek Assests/QR Codes/Clue 2.png",
-				"Poltek Assests/QR Codes/Clue 3.png",
-				"Poltek Assests/QR Codes/Clue 4.png",
-				"Poltek Assests/QR Codes/Clue 5.png",
-				"Poltek Assests/QR Codes/Raw Values.png",
-				"Poltek Assests/Singaporean Attendees Final.numbers",
-				"Poltek Assests/team_codes.numbers",
 				PoltekActionClassifierORGINAL.mlmodel,
 				PoltekAudio.mlmodel,
 				"PoltekImagesClassification 1.mlmodel",
@@ -109,6 +63,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		802ABB632E387FD700342FEE /* Poltek Assests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Poltek Assests";
+			sourceTree = "<group>";
+		};
 		80EAFAD72E0E413D008CDB45 /* Poltek Visit App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -160,6 +119,7 @@
 			children = (
 				80EAFAD72E0E413D008CDB45 /* Poltek Visit App */,
 				80EAFAEA2E0E413E008CDB45 /* Poltek Visit AppTests */,
+				802ABB632E387FD700342FEE /* Poltek Assests */,
 				80EAFAF42E0E413E008CDB45 /* Poltek Visit AppUITests */,
 				80EAFAD62E0E413D008CDB45 /* Products */,
 			);
@@ -237,6 +197,7 @@
 				80EAFAF32E0E413E008CDB45 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				802ABB632E387FD700342FEE /* Poltek Assests */,
 				80EAFAF42E0E413E008CDB45 /* Poltek Visit AppUITests */,
 			);
 			name = "Poltek Visit AppUITests";
