@@ -167,3 +167,9 @@ private extension String {
         return String(self[index(startIndex, offsetBy: i)])
     }
 }
+
+//struct TeamInput : PreviewProvider {
+//    static var previews: some View {
+//        TeamInputView(onComplete:{}, onBack: {})
+//    }
+//}
