@@ -28,29 +28,31 @@ struct MatchingPuzzleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 1.0, green: 0.95, blue: 0.8),
-                        Color.white
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AdaptiveBackground()
+                    .overlay(
+                        Color(.systemBackground)
+                            .opacity(0.25)
+                            .blendMode(.overlay)
+                    )
+                    .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    // Title & subtitle
                     VStack(spacing: 8) {
-                        Text("Cultural Expression")
-                            .font(.largeTitle)
+                        Text("Cultural Expression Quest")
+                            .font(.title)
                             .bold()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)                            .allowsTightening(true)
                             .multilineTextAlignment(.center)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal)
+                            .padding(.bottom, 4)
                         Text("Tap the matching pairs")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 32)
+                    .padding(.top, 60) // extra top padding so it’s clear of the notch
                     .padding(.horizontal)
 
                     // Cards container
@@ -66,16 +68,17 @@ struct MatchingPuzzleView: View {
                         .padding()
                         .frame(maxWidth: .infinity, minHeight: 300)
                     }
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding(.horizontal)
+//                    .background(.ultraThinMaterial)
+//                    .cornerRadius(20)
+//                    .padding(.horizontal)
 
                     Spacer()
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Back", action: onBack)
+                    // Uncomment if needed:
+                    // Button("Back", action: onBack)
                 }
             }
             .onReceive(data.$pairs) { all in
@@ -186,6 +189,7 @@ fileprivate struct CardView: View {
     enum CardState { case normal, selected, wrong, correct }
     let text: String
     let state: CardState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Text(text)
@@ -195,18 +199,37 @@ fileprivate struct CardView: View {
             .background(background)
             .cornerRadius(8)
             .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange, lineWidth: 1))
+                .stroke(Color.gray, lineWidth: 1))
+            .foregroundColor(.primary) // adapts to light/dark
     }
 
     private var background: Color {
         switch state {
-        case .normal:   return .white
-        case .selected: return Color.orange.opacity(0.3)
-        case .wrong:    return Color.red.opacity(0.5)
-        case .correct:  return Color.green.opacity(0.5)
+        case .normal:
+            // card base adapts so it’s distinguishable in dark mode
+            return colorScheme == .dark ? Color(.systemGray6).opacity(0.2) : .white
+        case .selected:
+            return Color.orange.opacity(0.3)
+        case .wrong:
+            return Color.red.opacity(0.5)
+        case .correct:
+            return Color.green.opacity(0.5)
         }
     }
 }
+
+//struct MatchingPuzzleView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        Group {
+//            MatchingPuzzleView(onComplete: {}, onBack: {})
+//                .previewDevice("iPhone 14")
+//                .preferredColorScheme(.light)
+//            MatchingPuzzleView(onComplete: {}, onBack: {})
+//                .previewDevice("iPhone 14")
+//                .preferredColorScheme(.dark)
+//        }
+//    }
+//}
 
 struct MatchingPuzzleView_Previews: PreviewProvider {
     static var previews: some View {
