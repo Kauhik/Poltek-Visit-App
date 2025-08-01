@@ -42,7 +42,7 @@ struct TeamInputView: View {
     private var isComplete: Bool { teamNumber.count >= 1 }
     
     /// Valid team number range
-    private let validRange = 1...55
+    private let validRange = 1...200
     
     var body: some View {
         ZStack {
@@ -70,10 +70,9 @@ struct TeamInputView: View {
                             Text("Enter your group number")
                                 .font(.headline)
                             
-                            HStack(spacing: 16) {
-                                DigitCircleView(digit: teamNumber.digit(at: 0))
-                                DigitCircleView(digit: teamNumber.digit(at: 1))
-                            }
+                            // Single number box replacing the two bubbles
+                            NumberBoxView(number: teamNumber)
+                                .onTapGesture { isFocused = true }
                             
                             Button {
                                 isFocused = false
@@ -97,7 +96,7 @@ struct TeamInputView: View {
                         .onTapGesture { isFocused = true }
                         
                         if showToast {
-                            Text("pls give a valid team number for 1 to 55")
+                            Text("Give a valid team number between 1 and 200") // remember to edit the cnumber here is the range number is changed
                                 .font(.subheadline)
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
@@ -126,7 +125,7 @@ struct TeamInputView: View {
                 .focused($isFocused)
                 .onChange(of: teamNumber) { new in
                     let nums = new.filter(\.isNumber)
-                    teamNumber = String(nums.prefix(2))
+                    teamNumber = String(nums.prefix(3)) // allow up to 3 digits now
                 }
                 .frame(width: 0, height: 0)
                 .opacity(0)
@@ -149,27 +148,25 @@ struct TeamInputView: View {
     }
 }
 
-private struct DigitCircleView: View {
-    let digit: String
+private struct NumberBoxView: View {
+    let number: String
     var body: some View {
-        Text(digit)
-            .font(.title)
-            .frame(width: 64, height: 64)
-            .background(Color.white)
-            .clipShape(Circle())
-            .shadow(radius: 4)
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white)
+                .frame(height: 64)
+                .shadow(radius: 4)
+            Text(number.isEmpty ? "--" : number)
+                .font(.system(size: 40, weight: .bold))
+                .foregroundColor(.black)
+        }
+        .frame(maxWidth: 160)
     }
 }
 
 private extension String {
     func digit(at i: Int) -> String {
-        guard count > i else { return "" }
+        guard count > i else { return "--" }
         return String(self[index(startIndex, offsetBy: i)])
     }
 }
-
-//struct TeamInput : PreviewProvider {
-//    static var previews: some View {
-//        TeamInputView(onComplete:{}, onBack: {})
-//    }
-//}

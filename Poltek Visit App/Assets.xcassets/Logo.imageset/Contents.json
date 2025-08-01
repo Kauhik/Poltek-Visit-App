@@ -11,6 +11,7 @@
           "value" : "light"
         }
       ],
+      "filename" : "logo.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -21,6 +22,7 @@
           "value" : "dark"
         }
       ],
+      "filename" : "Group 50.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
@@ -35,7 +37,6 @@
           "value" : "light"
         }
       ],
-      "filename" : "logo.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
@@ -46,7 +47,6 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Dark Logo.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
