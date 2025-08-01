@@ -31,26 +31,56 @@ struct HolidayPuzzleView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Holiday Puzzle")
-                        .font(.title2).bold()
-                    Text("Tap the matching pairs")
-                        .font(.subheadline)
-                }
-                .padding(.horizontal)
+            ZStack {
+                AdaptiveBackground()
+                    .overlay(
+                        Color(.systemBackground)
+                            .opacity(0.25)
+                            .blendMode(.overlay)
+                    )
+                    .ignoresSafeArea()
 
-                VStack(spacing: 12) {
-                    ForEach(0..<wordCards.count, id: \.self) { row in
-                        HStack(spacing: 12) {
-                            cardViewLeft(row)
-                            cardViewRight(row)
-                        }
+                VStack(spacing: 24) {
+                    VStack(spacing: 8) {
+                        Text("Holiday Puzzle")
+                            .font(.title)
+                            .bold()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .allowsTightening(true)
+                            .multilineTextAlignment(.center)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal)
+                            .padding(.bottom, 4)
+
+                        Text("Tap the matching pairs")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                }
-                .padding(.horizontal)
+                    .padding(.top, 60)
+                    .padding(.horizontal)
 
-                Spacer()
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(0..<wordCards.count, id: \.self) { row in
+                                HStack(spacing: 12) {
+                                    cardViewLeft(row)
+                                    cardViewRight(row)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
+
+                    Spacer()
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    // Button("Back", action: onBack)
+                }
             }
             .onReceive(data.$pairs) { all in
                 let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
@@ -63,8 +93,8 @@ struct HolidayPuzzleView: View {
                     repeat {
                         tmp = Array(filtered.shuffled().prefix(5))
                     } while !(
-                        tmp.contains(where:{ $0.origin=="Singapore" }) &&
-                        tmp.contains(where:{ $0.origin=="Indonesia" })
+                        tmp.contains(where:{ $0.origin == "Singapore" }) &&
+                        tmp.contains(where:{ $0.origin == "Indonesia" })
                     )
                     chosen = tmp
                 } else {
@@ -87,14 +117,10 @@ struct HolidayPuzzleView: View {
                 matchedWords.removeAll()
                 matchedMeanings.removeAll()
             }
-            .navigationTitle("Holidays Puzzle")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Back", action: onBack)
-                }
-            }
         }
     }
+
+    // MARK: - Card helpers
 
     private func cardViewLeft(_ row: Int) -> some View {
         CardView(text: wordCards[row].text, state: wordState(row))
@@ -170,6 +196,7 @@ fileprivate struct CardView: View {
     enum CardState { case normal, selected, wrong, correct }
     let text: String
     let state: CardState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Text(text)
@@ -179,23 +206,48 @@ fileprivate struct CardView: View {
             .background(background)
             .cornerRadius(8)
             .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange, lineWidth: 1))
+                .stroke(strokeColor, lineWidth: 1))
+            .foregroundColor(.primary)
+    }
+
+    private var strokeColor: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.2)
+        } else {
+            return Color(.systemGray5)
+        }
     }
 
     private var background: Color {
         switch state {
-        case .normal:   return .white
-        case .selected: return Color.orange.opacity(0.3)
-        case .wrong:    return Color.red.opacity(0.5)
-        case .correct:  return Color.green.opacity(0.5)
+        case .normal:
+            return colorScheme == .dark ? Color(.systemGray6).opacity(0.2) : .white
+        case .selected:
+            return Color.orange.opacity(0.3)
+        case .wrong:
+            return Color.red.opacity(0.5)
+        case .correct:
+            return Color.green.opacity(0.5)
         }
     }
 }
 
+//struct HolidayPuzzleView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        Group {
+//            HolidayPuzzleView(onComplete: {}, onBack: {})
+//                .preferredColorScheme(.light)
+//            HolidayPuzzleView(onComplete: {}, onBack: {})
+//                .preferredColorScheme(.dark)
+//        }
+//        .previewDevice("iPhone 14")
+//    }
+//}
+
 
 struct HolidayPuzzle: PreviewProvider {
     static var previews: some View {
-        HolidayPuzzleView (onComplete: {}, onBack: {})
+        HolidayPuzzleView(onComplete: {}, onBack: {})
             .previewDevice("iPhone 14")
     }
 }
