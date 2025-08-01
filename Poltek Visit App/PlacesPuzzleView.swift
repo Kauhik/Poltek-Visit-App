@@ -5,7 +5,6 @@
 //  Created by Kaushik Manian on 1/7/25.
 //
 
-
 import SwiftUI
 
 struct PlacesPuzzleView: View {
@@ -17,19 +16,18 @@ struct PlacesPuzzleView: View {
     @State private var currentIndex = 0
     @State private var selection: String? = nil
     @State private var correctCount = 0
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 1.0, green: 0.95, blue: 0.8),
-                        Color.white
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AdaptiveBackground()
+                    .overlay(
+                        Color(.systemBackground)
+                            .opacity(0.25)
+                            .blendMode(.overlay)
+                    )
+                    .ignoresSafeArea()
 
                 VStack(spacing: 24) {
                     // Header
@@ -38,12 +36,16 @@ struct PlacesPuzzleView: View {
                             .font(.largeTitle)
                             .bold()
                             .multilineTextAlignment(.center)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .allowsTightening(true)
+                            .foregroundColor(.primary)
                         Text("Match destination with the country")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 32)
+                    .padding(.top, 60)
                     .padding(.horizontal)
 
                     if currentIndex < items.count {
@@ -85,15 +87,24 @@ struct PlacesPuzzleView: View {
                                         selection = nil
                                     }
                                 } label: {
-                                    Text(flagEmoji(for: country))
-                                        .font(.system(size: 50))
-                                        .frame(width: 80, height: 80)
-                                        .background(backgroundColor(for: country))
-                                        .clipShape(Circle())
-                                        .overlay(
+                                    ZStack {
+                                        Circle()
+                                            .fill(baseCircleBackground())
+                                            .frame(width: 80, height: 80)
+                                        if let sel = selection, sel == country {
                                             Circle()
-                                                .stroke(Color.orange, lineWidth: 1)
-                                        )
+                                                .fill(selection == place.origin
+                                                      ? Color.green.opacity(0.5)
+                                                      : Color.red.opacity(0.5))
+                                                .frame(width: 80, height: 80)
+                                        }
+                                        Text(flagEmoji(for: country))
+                                            .font(.system(size: 50))
+                                    }
+                                    .overlay(
+                                        Circle()
+                                            .stroke(strokeColor, lineWidth: 1)
+                                    )
                                 }
                                 .disabled(selection != nil)
                             }
@@ -124,21 +135,28 @@ struct PlacesPuzzleView: View {
 
     // MARK: - Helpers
 
+    private var strokeColor: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.2)
+        } else {
+            return Color(.systemGray5)
+        }
+    }
+
+    private func baseCircleBackground() -> Color {
+        if colorScheme == .dark {
+            return Color(.systemGray6).opacity(0.2)
+        } else {
+            return .white
+        }
+    }
+
     private func flagEmoji(for country: String) -> String {
         switch country {
         case "Singapore": return "🇸🇬"
         case "Indonesia":  return "🇮🇩"
         default:           return "?"
         }
-    }
-
-    private func backgroundColor(for country: String) -> Color {
-        guard let sel = selection, sel == country else {
-            return .white
-        }
-        return sel == items[currentIndex].origin
-            ? Color.green.opacity(0.5)
-            : Color.red.opacity(0.5)
     }
 
     private func startQuiz(with all: [PlacePair]) {
@@ -155,6 +173,12 @@ struct PlacesPuzzleView: View {
 
 struct PlacesPuzzleView_Previews: PreviewProvider {
     static var previews: some View {
-        PlacesPuzzleView(onComplete: {}, onBack: {})
+        Group {
+            PlacesPuzzleView(onComplete: {}, onBack: {})
+                .preferredColorScheme(.light)
+            PlacesPuzzleView(onComplete: {}, onBack: {})
+                .preferredColorScheme(.dark)
+        }
+        .previewDevice("iPhone 14")
     }
 }
