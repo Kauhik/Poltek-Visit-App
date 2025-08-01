@@ -11,7 +11,7 @@ struct CodeView: View {
     let code:      String
     let codeLabel: String
     var onDone:    () -> Void
-    
+
     private let emojis = [
         "🎉","🔒","🔓","✨","🎈",
         "🥳","🎊","🎂","💥","🌟",
@@ -19,23 +19,21 @@ struct CodeView: View {
         "🎉","✨","🌟","🎊","💥",
         "🎈","🥳","🎇","🎆","🪅",
         "🎈","🥳","🎇","🎆","🪅"
-
     ]
-    
+
     @State private var showEmojis = true
-    
+
     var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color(red: 1.0, green: 0.95, blue: 0.8),
-                    Color.white
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-            
+            // Adaptive background like the puzzle views
+            AdaptiveBackground()
+                .overlay(
+                    Color(.systemBackground)
+                        .opacity(0.25)
+                        .blendMode(.overlay)
+                )
+                .ignoresSafeArea()
+
             VStack(spacing: 32) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 24)
@@ -50,14 +48,14 @@ struct CodeView: View {
                         .frame(height: 250)
                         .padding(.horizontal, 24)
                         .shadow(radius: 10)
-                    
+
                     VStack(spacing: 8) {
                         if !code.isEmpty {
                             Text(code)
                                 .font(.system(size: 120, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+
                         Text(codeLabel)
                             .font(.system(
                                 size: code.isEmpty ? fortyEightSize : 28,
@@ -68,7 +66,7 @@ struct CodeView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                 }
-                
+
                 Button {
                     onDone()
                 } label: {
@@ -83,7 +81,7 @@ struct CodeView: View {
                 .contentShape(Rectangle())
                 .padding(.horizontal, 40)
             }
-            
+
             // Raining emojis on top of everything
             if showEmojis {
                 ForEach(Array(emojis.enumerated()), id: \.offset) { index, emoji in
@@ -99,7 +97,7 @@ struct CodeView: View {
             }
         }
     }
-    
+
     private var fortyEightSize: CGFloat { 48 }
 }
 
@@ -107,14 +105,14 @@ struct CodeView: View {
 struct RainingEmojiView: View {
     let emoji: String
     let delay: Double
-    
+
     @State private var x:       CGFloat = CGFloat.random(in: 0.1...0.9) // Random horizontal start position
     @State private var y:       CGFloat = -0.1 // Start above screen
     @State private var opacity: Double  = 1.0
-    
+
     private let horizontalDrift = CGFloat.random(in: -0.1...0.1) // Slight horizontal movement
     private let fallDuration = Double.random(in: 1.8...3.2) // Faster fall speed
-    
+
     var body: some View {
         GeometryReader { geo in
             Text(emoji)
@@ -130,7 +128,7 @@ struct RainingEmojiView: View {
                             y = 1.1 // Fall below screen
                             x = x + horizontalDrift // Slight horizontal drift
                         }
-                        
+
                         // Fade out near the bottom
                         DispatchQueue.main.asyncAfter(deadline: .now() + fallDuration * 0.7) {
                             withAnimation(.easeOut(duration: fallDuration * 0.3)) {
