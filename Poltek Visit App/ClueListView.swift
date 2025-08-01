@@ -95,7 +95,7 @@ struct ClueListView: View {
                     .padding(.bottom, 32)
                 }
                 .padding(.top, 16)
-                .background(.ultraThinMaterial)
+//                .background(.ultraThinMaterial)
                 .cornerRadius(20)
                 .padding(.horizontal, 16)
 

@@ -24,13 +24,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		80EAFAD52E0E413D008CDB45 /* Poltek Visit App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Poltek Visit App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		80EAFAE72E0E413E008CDB45 /* Poltek Visit AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Poltek Visit AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		80EAFAF12E0E413E008CDB45 /* Poltek Visit AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Poltek Visit AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		80EAFAD52E0E413D008CDB45 /* Locker Quest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Locker Quest.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		80EAFAE72E0E413E008CDB45 /* Locker QuestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Locker QuestTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		80EAFAF12E0E413E008CDB45 /* Locker QuestUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Locker QuestUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		80A238A92E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Poltek Visit AppTests" target */ = {
+		80A238A92E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Locker QuestTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Book1.csv,
@@ -43,9 +43,9 @@
 				"PoltekImagesClassification 1.mlmodel",
 				team_codes.csv,
 			);
-			target = 80EAFAE62E0E413E008CDB45 /* Poltek Visit AppTests */;
+			target = 80EAFAE62E0E413E008CDB45 /* Locker QuestTests */;
 		};
-		80A238AA2E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Poltek Visit AppUITests" target */ = {
+		80A238AA2E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Locker QuestUITests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Book1.csv,
@@ -58,7 +58,7 @@
 				"PoltekImagesClassification 1.mlmodel",
 				team_codes.csv,
 			);
-			target = 80EAFAF02E0E413E008CDB45 /* Poltek Visit AppUITests */;
+			target = 80EAFAF02E0E413E008CDB45 /* Locker QuestUITests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -71,8 +71,8 @@
 		80EAFAD72E0E413D008CDB45 /* Poltek Visit App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				80A238A92E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Poltek Visit AppTests" target */,
-				80A238AA2E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Poltek Visit AppUITests" target */,
+				80A238A92E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Locker QuestTests" target */,
+				80A238AA2E12CA0200D97B8F /* Exceptions for "Poltek Visit App" folder in "Locker QuestUITests" target */,
 			);
 			path = "Poltek Visit App";
 			sourceTree = "<group>";
@@ -128,9 +128,9 @@
 		80EAFAD62E0E413D008CDB45 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				80EAFAD52E0E413D008CDB45 /* Poltek Visit App.app */,
-				80EAFAE72E0E413E008CDB45 /* Poltek Visit AppTests.xctest */,
-				80EAFAF12E0E413E008CDB45 /* Poltek Visit AppUITests.xctest */,
+				80EAFAD52E0E413D008CDB45 /* Locker Quest.app */,
+				80EAFAE72E0E413E008CDB45 /* Locker QuestTests.xctest */,
+				80EAFAF12E0E413E008CDB45 /* Locker QuestUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -138,9 +138,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		80EAFAD42E0E413D008CDB45 /* Poltek Visit App */ = {
+		80EAFAD42E0E413D008CDB45 /* Locker Quest */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 80EAFAFB2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit App" */;
+			buildConfigurationList = 80EAFAFB2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker Quest" */;
 			buildPhases = (
 				80EAFAD12E0E413D008CDB45 /* Sources */,
 				80EAFAD22E0E413D008CDB45 /* Frameworks */,
@@ -153,16 +153,16 @@
 			fileSystemSynchronizedGroups = (
 				80EAFAD72E0E413D008CDB45 /* Poltek Visit App */,
 			);
-			name = "Poltek Visit App";
+			name = "Locker Quest";
 			packageProductDependencies = (
 			);
 			productName = "Poltek Visit App";
-			productReference = 80EAFAD52E0E413D008CDB45 /* Poltek Visit App.app */;
+			productReference = 80EAFAD52E0E413D008CDB45 /* Locker Quest.app */;
 			productType = "com.apple.product-type.application";
 		};
-		80EAFAE62E0E413E008CDB45 /* Poltek Visit AppTests */ = {
+		80EAFAE62E0E413E008CDB45 /* Locker QuestTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 80EAFAFE2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit AppTests" */;
+			buildConfigurationList = 80EAFAFE2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker QuestTests" */;
 			buildPhases = (
 				80EAFAE32E0E413E008CDB45 /* Sources */,
 				80EAFAE42E0E413E008CDB45 /* Frameworks */,
@@ -176,16 +176,16 @@
 			fileSystemSynchronizedGroups = (
 				80EAFAEA2E0E413E008CDB45 /* Poltek Visit AppTests */,
 			);
-			name = "Poltek Visit AppTests";
+			name = "Locker QuestTests";
 			packageProductDependencies = (
 			);
 			productName = "Poltek Visit AppTests";
-			productReference = 80EAFAE72E0E413E008CDB45 /* Poltek Visit AppTests.xctest */;
+			productReference = 80EAFAE72E0E413E008CDB45 /* Locker QuestTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		80EAFAF02E0E413E008CDB45 /* Poltek Visit AppUITests */ = {
+		80EAFAF02E0E413E008CDB45 /* Locker QuestUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 80EAFB012E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit AppUITests" */;
+			buildConfigurationList = 80EAFB012E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker QuestUITests" */;
 			buildPhases = (
 				80EAFAED2E0E413E008CDB45 /* Sources */,
 				80EAFAEE2E0E413E008CDB45 /* Frameworks */,
@@ -200,11 +200,11 @@
 				802ABB632E387FD700342FEE /* Poltek Assests */,
 				80EAFAF42E0E413E008CDB45 /* Poltek Visit AppUITests */,
 			);
-			name = "Poltek Visit AppUITests";
+			name = "Locker QuestUITests";
 			packageProductDependencies = (
 			);
 			productName = "Poltek Visit AppUITests";
-			productReference = 80EAFAF12E0E413E008CDB45 /* Poltek Visit AppUITests.xctest */;
+			productReference = 80EAFAF12E0E413E008CDB45 /* Locker QuestUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -230,7 +230,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 80EAFAD02E0E413D008CDB45 /* Build configuration list for PBXProject "Poltek Visit App" */;
+			buildConfigurationList = 80EAFAD02E0E413D008CDB45 /* Build configuration list for PBXProject "Locker Quest" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -244,9 +244,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				80EAFAD42E0E413D008CDB45 /* Poltek Visit App */,
-				80EAFAE62E0E413E008CDB45 /* Poltek Visit AppTests */,
-				80EAFAF02E0E413E008CDB45 /* Poltek Visit AppUITests */,
+				80EAFAD42E0E413D008CDB45 /* Locker Quest */,
+				80EAFAE62E0E413E008CDB45 /* Locker QuestTests */,
+				80EAFAF02E0E413E008CDB45 /* Locker QuestUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -302,12 +302,12 @@
 /* Begin PBXTargetDependency section */
 		80EAFAE92E0E413E008CDB45 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 80EAFAD42E0E413D008CDB45 /* Poltek Visit App */;
+			target = 80EAFAD42E0E413D008CDB45 /* Locker Quest */;
 			targetProxy = 80EAFAE82E0E413E008CDB45 /* PBXContainerItemProxy */;
 		};
 		80EAFAF32E0E413E008CDB45 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 80EAFAD42E0E413D008CDB45 /* Poltek Visit App */;
+			target = 80EAFAD42E0E413D008CDB45 /* Locker Quest */;
 			targetProxy = 80EAFAF22E0E413E008CDB45 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -515,7 +515,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Poltek Visit App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Poltek Visit App";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Locker Quest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Locker Quest";
 			};
 			name = Debug;
 		};
@@ -534,7 +534,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Poltek Visit App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Poltek Visit App";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Locker Quest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Locker Quest";
 			};
 			name = Release;
 		};
@@ -575,7 +575,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		80EAFAD02E0E413D008CDB45 /* Build configuration list for PBXProject "Poltek Visit App" */ = {
+		80EAFAD02E0E413D008CDB45 /* Build configuration list for PBXProject "Locker Quest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				80EAFAF92E0E413E008CDB45 /* Debug */,
@@ -584,7 +584,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		80EAFAFB2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit App" */ = {
+		80EAFAFB2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker Quest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				80EAFAFC2E0E413E008CDB45 /* Debug */,
@@ -593,7 +593,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		80EAFAFE2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit AppTests" */ = {
+		80EAFAFE2E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker QuestTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				80EAFAFF2E0E413E008CDB45 /* Debug */,
@@ -602,7 +602,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		80EAFB012E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Poltek Visit AppUITests" */ = {
+		80EAFB012E0E413E008CDB45 /* Build configuration list for PBXNativeTarget "Locker QuestUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				80EAFB022E0E413E008CDB45 /* Debug */,
