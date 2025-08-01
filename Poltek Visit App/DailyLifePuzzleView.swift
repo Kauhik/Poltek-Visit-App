@@ -28,30 +28,33 @@ struct DailyLifePuzzleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background gradient
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color(red: 1.0, green: 0.95, blue: 0.8),
-                        Color.white
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                AdaptiveBackground()
+                    .overlay(
+                        Color(.systemBackground)
+                            .opacity(0.25)
+                            .blendMode(.overlay)
+                    )
+                    .ignoresSafeArea()
 
                 VStack(spacing: 24) {
-                    // Title & subtitle, centered and prominent
                     VStack(spacing: 8) {
                         Text("Daily Life")
-                            .font(.largeTitle)
+                            .font(.title)
                             .bold()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .allowsTightening(true)
                             .multilineTextAlignment(.center)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal)
+                            .padding(.bottom, 4)
+
                         Text("Tap the matching pairs")
                             .font(.headline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 32)
+                    .padding(.top, 60) // extra top padding to clear notch
                     .padding(.horizontal)
 
                     // Puzzle cards container
@@ -65,23 +68,21 @@ struct DailyLifePuzzleView: View {
                             }
                         }
                         .padding()
-                        // Make box taller so it doesn't look empty
                         .frame(maxWidth: .infinity, minHeight: 300)
                     }
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(20)
-                    .padding(.horizontal)
+//                    .background(.ultraThinMaterial)
+//                    .cornerRadius(20)
+//                    .padding(.horizontal)
 
                     Spacer()
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-//                    Button("Back", action: onBack)
+                    // Button("Back", action: onBack)
                 }
             }
             .onReceive(data.$pairs) { all in
-                // Filter and choose 5 items as before
                 let filtered = all.filter { ["Singapore","Indonesia"].contains($0.origin) }
                 let origins = Set(filtered.map(\.origin))
                 let needMix = origins.contains("Singapore") && origins.contains("Indonesia")
@@ -99,7 +100,6 @@ struct DailyLifePuzzleView: View {
                     chosen = Array(filtered.shuffled().prefix(5))
                 }
 
-                // Build cards
                 wordCards = chosen.map {
                     CardItem(id: $0.id * 2, text: $0.word, matchId: $0.id)
                 }.shuffled()
@@ -107,7 +107,6 @@ struct DailyLifePuzzleView: View {
                     CardItem(id: $0.id * 2 + 1, text: $0.meaning, matchId: $0.id)
                 }.shuffled()
 
-                // Reset state
                 selectedWord = nil
                 selectedMeaning = nil
                 wrongWords.removeAll()
@@ -195,6 +194,7 @@ fileprivate struct CardView: View {
     enum CardState { case normal, selected, wrong, correct }
     let text: String
     let state: CardState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Text(text)
@@ -204,21 +204,47 @@ fileprivate struct CardView: View {
             .background(background)
             .cornerRadius(8)
             .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.orange, lineWidth: 1))
+                .stroke(strokeColor, lineWidth: 1))
+            .foregroundColor(.primary) // adapts to light/dark
+    }
+
+    private var strokeColor: Color {
+        if colorScheme == .dark {
+            return Color.white.opacity(0.2)
+        } else {
+            return Color(.systemGray5)
+        }
     }
 
     private var background: Color {
         switch state {
-        case .normal:   return .white
-        case .selected: return Color.orange.opacity(0.3)
-        case .wrong:    return Color.red.opacity(0.5)
-        case .correct:  return Color.green.opacity(0.5)
+        case .normal:
+            return colorScheme == .dark ? Color(.systemGray6).opacity(0.2) : .white
+        case .selected:
+            return Color.orange.opacity(0.3)
+        case .wrong:
+            return Color.red.opacity(0.5)
+        case .correct:
+            return Color.green.opacity(0.5)
         }
     }
 }
 
-struct DailyLifePuzzleView_Previews: PreviewProvider {
+//struct DailyLifePuzzleView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        Group {
+//            DailyLifePuzzleView(onComplete: {}, onBack: {})
+//                .preferredColorScheme(.light)
+//            DailyLifePuzzleView(onComplete: {}, onBack: {})
+//                .preferredColorScheme(.dark)
+//        }
+//    }
+//}
+
+
+struct DailyLife: PreviewProvider {
     static var previews: some View {
         DailyLifePuzzleView(onComplete: {}, onBack: {})
+            .previewDevice("iPhone 14")
     }
 }
